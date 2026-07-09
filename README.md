@@ -2,7 +2,7 @@
 
 > "The Intelligent Stadium Companion powered by Generative AI"
 
-![WorldCup AI Command Center](https://images.unsplash.com/photo-1518605368461-1e96f01df22e?q=80&w=1200&auto=format&fit=crop) *(Placeholder Image)*
+![WorldCup AI Command Center](assets/hero_image.png)
 
 ## Overview
 A hackathon-winning, production-ready Streamlit application built for the FIFA World Cup 2026. This GenAI-powered smart stadium ecosystem enhances the experience for fans, organizers, volunteers, and security teams.
