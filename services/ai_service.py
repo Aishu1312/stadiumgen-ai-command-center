@@ -11,10 +11,15 @@ load_dotenv()
 
 def get_genai_model() -> Optional[Any]:
     """Initializes the Gemini model."""
+    api_key = None
     try:
-        api_key = st.secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY"))
+        if "GEMINI_API_KEY" in st.secrets:
+            api_key = st.secrets["GEMINI_API_KEY"]
     except Exception:
-        api_key = os.getenv("GEMINI_API_KEY")
+        pass
+        
+    if not api_key:
+        api_key = os.environ.get("GEMINI_API_KEY")
 
     if api_key and api_key != "your_gemini_api_key_here":
         genai.configure(api_key=api_key)
