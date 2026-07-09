@@ -9,9 +9,8 @@ from typing import Generator, Any, Optional
 
 load_dotenv()
 
-@st.cache_resource
 def get_genai_model() -> Optional[Any]:
-    """Initializes and caches the Gemini model for performance."""
+    """Initializes the Gemini model."""
     try:
         api_key = st.secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY"))
     except Exception:
