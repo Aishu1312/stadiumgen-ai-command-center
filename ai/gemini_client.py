@@ -1,11 +1,16 @@
 import os
+import streamlit as st
 import google.generativeai as genai
 from dotenv import load_dotenv
 
 load_dotenv()
 
 # Configure API
-API_KEY = os.getenv("GEMINI_API_KEY")
+try:
+    API_KEY = st.secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY"))
+except Exception:
+    API_KEY = os.getenv("GEMINI_API_KEY")
+
 if API_KEY and API_KEY != "your_gemini_api_key_here":
     genai.configure(api_key=API_KEY)
     model = genai.GenerativeModel('gemini-1.5-pro') # Using latest model
