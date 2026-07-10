@@ -50,7 +50,7 @@ def generate_response(prompt: str, system_instruction: str = "") -> str:
     """Generates a text response from Gemini given a prompt with retry logic."""
     model = get_genai_model()
     if not model:
-        return "[Simulated AI Response] Please configure the GEMINI_API_KEY in .env or .streamlit/secrets.toml to enable live AI responses.\n\n" + prompt[:100]
+        return "[Simulated AI Response] If you recently uploaded your API key, Streamlit Cloud is still deploying the update. Please wait 2-3 minutes and refresh the page! (Or check your API key format)\n\n" + prompt[:100]
     
     full_prompt = f"System: {system_instruction}\n\nUser: {prompt}" if system_instruction else prompt
     try:
@@ -65,7 +65,7 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
     """Generates a streaming response for interactive chat UIs."""
     model = get_genai_model()
     if not model:
-        yield "[Simulated AI Response] Please configure the GEMINI_API_KEY in .env or secrets.toml.\n\n"
+        yield "[Simulated AI Response] If you recently uploaded your API key, Streamlit Cloud is still deploying the update. Please wait 2-3 minutes and refresh the page!\n\n"
         yield prompt[:50] + "..."
         return
         
