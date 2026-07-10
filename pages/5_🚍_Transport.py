@@ -1,9 +1,13 @@
 import streamlit as st
+
+st.set_page_config(page_title="AI Transport Planner", page_icon="🚍", layout="wide")
+
+from utils.session import init_session_state
+init_session_state()
 from components.ui import render_header, render_toast, show_loading_skeleton
 from services.data_service import generate_transport_data
 from services.ai_service import generate_response_stream
 
-st.set_page_config(page_title="AI Transport Planner", page_icon="🚍", layout="wide")
 
 def display_transport():
     render_header("AI Transportation Planner", "Predictive routing and live transit status")

@@ -1,9 +1,13 @@
 import streamlit as st
+
+st.set_page_config(page_title="Smart Navigation", page_icon="🗺️", layout="wide")
+
+from utils.session import init_session_state
+init_session_state()
 import folium
 from streamlit_folium import st_folium
 from components.ui import render_header, show_loading_skeleton, render_toast
 
-st.set_page_config(page_title="Smart Navigation", page_icon="🗺️", layout="wide")
 
 def display_navigation():
     render_header("AI Indoor Navigation", "Find the shortest and most accessible routes")

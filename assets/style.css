@@ -125,3 +125,18 @@ h1, h2, h3, h4, h5, h6 {
 .badge-warning { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
 .badge-danger { background: rgba(239, 68, 68, 0.15); color: #f87171; }
 .badge-info { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+
+/* Skeleton Loader */
+@keyframes skeleton-loading {
+    0% { background-color: rgba(255, 255, 255, 0.05); }
+    50% { background-color: rgba(255, 255, 255, 0.15); }
+    100% { background-color: rgba(255, 255, 255, 0.05); }
+}
+
+.skeleton {
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: 8px;
+    height: 100px;
+    width: 100%;
+    margin-bottom: 16px;
+}

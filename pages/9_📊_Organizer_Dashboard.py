@@ -1,11 +1,15 @@
 import streamlit as st
+
+st.set_page_config(page_title="Organizer Dashboard", page_icon="📊", layout="wide")
+
+from utils.session import init_session_state
+init_session_state()
 import pandas as pd
 import plotly.express as px
 from components.ui import render_header, render_metric, show_loading_skeleton
 from services.ai_service import generate_response_stream
 from config.constants import Prompts
 
-st.set_page_config(page_title="Organizer Dashboard", page_icon="📊", layout="wide")
 
 def display_organizer():
     render_header("Organizer Dashboard", "Executive insights and predictive analytics")

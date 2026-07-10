@@ -12,14 +12,7 @@ st.set_page_config(
 from components.ui import load_css
 from config.settings import settings
 
-def init_session_state():
-    """Initializes global session state variables to prevent KeyErrors."""
-    if "theme" not in st.session_state:
-        st.session_state.theme = "Dark Mode (Glassmorphism)"
-    if "language" not in st.session_state:
-        st.session_state.language = settings.DEFAULT_LANGUAGE
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+from utils.session import init_session_state
 
 def main():
     init_session_state()

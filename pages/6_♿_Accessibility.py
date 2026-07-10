@@ -1,8 +1,12 @@
 import streamlit as st
+
+st.set_page_config(page_title="Accessibility", page_icon="♿", layout="wide")
+
+from utils.session import init_session_state
+init_session_state()
 from components.ui import render_header, render_toast
 from services.ai_service import generate_response_stream
 
-st.set_page_config(page_title="Accessibility", page_icon="♿", layout="wide")
 
 def display_accessibility():
     render_header("Smart Accessibility Assistant", "Ensuring an inclusive experience for everyone")

@@ -1,8 +1,12 @@
 import streamlit as st
+
+st.set_page_config(page_title="AI Assistant", page_icon="🤖", layout="wide")
+
+from utils.session import init_session_state
+init_session_state()
 from services.ai_service import generate_response_stream
 from components.ui import render_header
 
-st.set_page_config(page_title="AI Assistant", page_icon="🤖", layout="wide")
 
 def display_chat():
     render_header("AI Stadium Assistant", "Your GenAI-powered intelligent companion")

@@ -1,9 +1,13 @@
 import streamlit as st
+
+st.set_page_config(page_title="Crowd Intelligence", page_icon="👥", layout="wide")
+
+from utils.session import init_session_state
+init_session_state()
 import plotly.express as px
 from components.ui import render_header, render_metric
 from services.data_service import generate_crowd_data, generate_map_data
 
-st.set_page_config(page_title="Crowd Intelligence", page_icon="👥", layout="wide")
 
 def display_crowd_dashboard():
     render_header("Crowd Intelligence Dashboard", "Live density tracking and queue predictions")

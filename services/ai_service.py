@@ -9,29 +9,34 @@ from typing import Generator, Any, Optional
 
 load_dotenv()
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 def get_genai_model() -> Optional[Any]:
     """Initializes the Gemini model."""
-    api_key = None
+    api_key = os.environ.get("GEMINI_API_KEY")
+    
     try:
         if "GEMINI_API_KEY" in st.secrets:
             api_key = st.secrets["GEMINI_API_KEY"]
     except Exception:
         pass
-        
-    if not api_key:
-        api_key = os.environ.get("GEMINI_API_KEY")
 
-    if api_key and api_key != "your_gemini_api_key_here":
-        genai.configure(api_key=api_key)
-        # Apply strict generation config
-        generation_config = {
-            "temperature": settings.TEMPERATURE,
-            "max_output_tokens": settings.MAX_OUTPUT_TOKENS,
-        }
-        return genai.GenerativeModel(
-            model_name=settings.DEFAULT_MODEL,
-            generation_config=generation_config
-        )
+    if api_key and api_key.strip() != "" and api_key != "your_gemini_api_key_here":
+        try:
+            genai.configure(api_key=api_key)
+            generation_config = {
+                "temperature": settings.TEMPERATURE,
+                "max_output_tokens": settings.MAX_OUTPUT_TOKENS,
+            }
+            return genai.GenerativeModel(
+                model_name=settings.DEFAULT_MODEL,
+                generation_config=generation_config
+            )
+        except Exception as e:
+            logger.error(f"Failed to configure Gemini model: {e}")
+            return None
     return None
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
@@ -39,13 +44,14 @@ def generate_response(prompt: str, system_instruction: str = "") -> str:
     """Generates a text response from Gemini given a prompt with retry logic."""
     model = get_genai_model()
     if not model:
-        return "[Simulated AI Response]: Please configure the GEMINI_API_KEY to enable live AI responses. \n\n" + prompt[:100]
+        return "[Simulated AI Response] Please configure the GEMINI_API_KEY in .env or .streamlit/secrets.toml to enable live AI responses.\n\n" + prompt[:100]
     
     full_prompt = f"System: {system_instruction}\n\nUser: {prompt}" if system_instruction else prompt
     try:
         response = model.generate_content(full_prompt)
         return response.text
     except Exception as e:
+        logger.error(f"Error in generate_response: {e}")
         return f"Error communicating with AI: {str(e)}"
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
@@ -53,7 +59,7 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
     """Generates a streaming response for interactive chat UIs."""
     model = get_genai_model()
     if not model:
-        yield "[Simulated AI Response]: Please configure the GEMINI_API_KEY.\n\n"
+        yield "[Simulated AI Response] Please configure the GEMINI_API_KEY in .env or secrets.toml.\n\n"
         yield prompt[:50] + "..."
         return
         
@@ -64,6 +70,7 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
             if chunk.text:
                 yield chunk.text
     except Exception as e:
+        logger.error(f"Error in generate_response_stream: {e}")
         yield f"\n\n[Error]: {str(e)}"
 
 def translate_text(text: str, target_language: str) -> str:

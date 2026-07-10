@@ -34,9 +34,12 @@ def render_header(title: str, subtitle: str = None):
     st.markdown("<hr class='styled-hr'>", unsafe_allow_html=True)
 
 def show_loading_skeleton(seconds: float = 1.0, message: str = "Loading data..."):
-    """Displays a skeleton loading state using Streamlit's native spinner."""
+    """Displays a skeleton loading state using Streamlit's native spinner and CSS skeleton."""
+    placeholder = st.empty()
+    placeholder.markdown("<div class='skeleton'></div>", unsafe_allow_html=True)
     with st.spinner(message):
         time.sleep(seconds)
+    placeholder.empty()
 
 def render_toast(message: str, icon: str = "ℹ️"):
     """Displays a toast notification."""

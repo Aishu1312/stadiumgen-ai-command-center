@@ -1,0 +1,2 @@
+# OS-level dependencies for Streamlit Cloud
+build-essential
