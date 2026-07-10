@@ -24,25 +24,46 @@ def display_home():
         render_metric("Sustainability Score", f"{score/100:.0f}/100", "Excellent", "success")
 
     st.markdown("<br><br>", unsafe_allow_html=True)
+    from services.ai_service import generate_response_stream
+
     st.markdown("### 🏟️ Quick Actions")
     col_a, col_b, col_c, col_d = st.columns(4)
     
+    action_result = None
+    
     with col_a:
         if st.button("Generate Evening Report", use_container_width=True):
-            show_loading_skeleton(1.5, "Compiling metrics...")
+            action_result = "Evening Report"
             render_toast("Evening Report generated successfully!", "✅")
-            st.success("Report saved to documents.")
     with col_b:
         if st.button("Broadcast Announcement", use_container_width=True):
+            action_result = "Broadcast Announcement"
             render_toast("Broadcast channel opened.", "🔊")
     with col_c:
         if st.button("Lockdown Protocol", use_container_width=True):
-            st.error("Protocol initiated!")
+            action_result = "Lockdown Protocol"
             render_toast("CRITICAL: Lockdown engaged.", "🚨")
     with col_d:
         if st.button("Dispatch Medics", use_container_width=True):
-            st.warning("Medics dispatched to Zone A.")
+            action_result = "Dispatch Medics"
             render_toast("Medics en route.", "🚑")
+
+    if action_result:
+        st.markdown("---")
+        st.markdown(f"### 🤖 AI Agent: {action_result}")
+        
+        prompt = ""
+        if action_result == "Evening Report":
+            prompt = "Generate a short evening operations report for the stadium. Include total visitors, any resolved incidents, and sustainability performance."
+        elif action_result == "Broadcast Announcement":
+            prompt = "Generate a polite, welcoming broadcast announcement for the stadium crowd thanking them for attending and wishing them a safe journey home."
+        elif action_result == "Lockdown Protocol":
+            prompt = "Generate a strict, clear emergency lockdown announcement instructing all patrons to remain seated and await security instructions."
+        elif action_result == "Dispatch Medics":
+            prompt = "Generate a brief radio dispatch message to the medical team directing them to Zone A for an immediate medical emergency."
+            
+        stream = generate_response_stream(prompt)
+        st.write_stream(stream)
 
 if __name__ == "__main__":
     display_home()
