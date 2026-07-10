@@ -31,7 +31,7 @@ def display_organizer():
         st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
         st.markdown("### 🔮 Predictive Footfall")
         df_trend = pd.DataFrame({
-            "Time": pd.date_range(start="2026-07-09 10:00", periods=10, freq="1H"),
+            "Time": pd.date_range(start="2026-07-09 10:00", periods=10, freq="h"),
             "Visitors": [5000, 12000, 25000, 40000, 60000, 80000, 84000, 82000, 45000, 15000]
         })
         fig = px.area(df_trend, x="Time", y="Visitors", template="plotly_dark", color_discrete_sequence=["#3b82f6"])
