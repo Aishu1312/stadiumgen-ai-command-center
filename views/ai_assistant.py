@@ -1,12 +1,8 @@
 import streamlit as st
-
-st.set_page_config(page_title="AI Assistant", page_icon="🤖", layout="wide")
-
-from utils.session import init_session_state
-init_session_state()
 from services.ai_service import generate_response_stream
 from components.ui import render_header
 
+st.session_state.current_page_context = "User is currently using the dedicated AI Assistant page for general stadium queries."
 
 def display_chat():
     render_header("AI Stadium Assistant", "Your GenAI-powered intelligent companion")
@@ -37,5 +33,4 @@ def display_chat():
             
         st.session_state.messages.append({"role": "assistant", "content": full_response})
 
-if __name__ == "__main__":
-    display_chat()
+display_chat()

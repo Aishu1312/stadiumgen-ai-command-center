@@ -1,13 +1,10 @@
 import streamlit as st
-
-st.set_page_config(page_title="Home", page_icon="🏠", layout="wide")
-
-from utils.session import init_session_state
-init_session_state()
 from components.ui import render_header, render_metric, show_loading_skeleton, render_toast
 from services.data_service import generate_sustainability_metrics
-import time
+from services.ai_service import generate_response_stream
 
+# Set context for AI Assistant
+st.session_state.current_page_context = "User is currently on the Home page, viewing the high-level dashboard and quick actions."
 
 def display_home():
     render_header("Stadium Command Center", "Live Overview of WorldCup 2026 Operations")
@@ -16,15 +13,14 @@ def display_home():
     with col1:
         render_metric("Total Visitors", "84,521", "+2,100 since last hour", "success")
     with col2:
-        render_metric("Active Incidents", "3", "-2 resolved recently", "info")
+        render_metric("Active Incidents", "3", "-2 resolved recently", "danger")
     with col3:
         render_metric("Avg Queue Time", "12 mins", "Normal", "success")
     with col4:
         score = generate_sustainability_metrics().get("energy_saved_kwh", 0)
-        render_metric("Sustainability Score", f"{score/100:.0f}/100", "Excellent", "success")
+        render_metric("Eco Score", f"{score/100:.0f}/100", "Excellent", "success")
 
     st.markdown("<br><br>", unsafe_allow_html=True)
-    from services.ai_service import generate_response_stream
 
     st.markdown("### 🏟️ Quick Actions")
     col_a, col_b, col_c, col_d = st.columns(4)
@@ -65,5 +61,4 @@ def display_home():
         stream = generate_response_stream(prompt)
         st.write_stream(stream)
 
-if __name__ == "__main__":
-    display_home()
+display_home()

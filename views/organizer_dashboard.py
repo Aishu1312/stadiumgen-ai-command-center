@@ -1,15 +1,10 @@
 import streamlit as st
-
-st.set_page_config(page_title="Organizer Dashboard", page_icon="📊", layout="wide")
-
-from utils.session import init_session_state
-init_session_state()
 import pandas as pd
-import plotly.express as px
 from components.ui import render_header, render_metric, show_loading_skeleton
 from services.ai_service import generate_response_stream
 from config.constants import Prompts
 
+st.session_state.current_page_context = "User is on the Organizer Dashboard, viewing high-level metrics and predicting footfall."
 
 def display_organizer():
     render_header("Organizer Dashboard", "Executive insights and predictive analytics")
@@ -34,9 +29,13 @@ def display_organizer():
             "Time": pd.date_range(start="2026-07-09 10:00", periods=10, freq="h"),
             "Visitors": [5000, 12000, 25000, 40000, 60000, 80000, 84000, 82000, 45000, 15000]
         })
-        fig = px.area(df_trend, x="Time", y="Visitors", template="plotly_dark", color_discrete_sequence=["#3b82f6"])
-        fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=10, l=10, r=10, b=10))
-        st.plotly_chart(fig, use_container_width=True)
+        try:
+            import plotly.express as px
+            fig = px.area(df_trend, x="Time", y="Visitors", template="plotly_dark", color_discrete_sequence=["#3b82f6"])
+            fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=10, l=10, r=10, b=10))
+            st.plotly_chart(fig, use_container_width=True)
+        except ImportError:
+             st.error("Missing dependency: plotly.")
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col_b:
@@ -52,5 +51,4 @@ def display_organizer():
                 st.warning("Please enter a question.")
         st.markdown("</div>", unsafe_allow_html=True)
 
-if __name__ == "__main__":
-    display_organizer()
+display_organizer()

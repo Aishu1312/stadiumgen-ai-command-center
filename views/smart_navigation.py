@@ -1,18 +1,12 @@
 import streamlit as st
-
-st.set_page_config(page_title="Smart Navigation", page_icon="🗺️", layout="wide")
-
-from utils.session import init_session_state
-init_session_state()
-import folium
-from streamlit_folium import st_folium
 from components.ui import render_header, show_loading_skeleton, render_toast
 
+st.session_state.current_page_context = "User is currently on the Smart Navigation page, routing between stadium zones."
 
 def display_navigation():
     render_header("AI Indoor Navigation", "Find the shortest and most accessible routes")
 
-    col1, col2 = st.columns([1, 3])
+    col1, col2 = st.columns([1, 2])
 
     with col1:
         st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
@@ -33,11 +27,15 @@ def display_navigation():
 
     with col2:
         st.markdown("### 🏟️ Interactive Map")
-        m = folium.Map(location=[40.8128, -74.0742], zoom_start=16, tiles="CartoDB dark_matter")
-        folium.Marker([40.8128, -74.0742], popup="Stadium Center", icon=folium.Icon(color="blue", icon="info-sign")).add_to(m)
-        folium.Marker([40.8140, -74.0750], popup="Gate 1", icon=folium.Icon(color="green", icon="play")).add_to(m)
-        
-        st_folium(m, width=800, height=500, returned_objects=[])
+        try:
+            import folium
+            from streamlit_folium import st_folium
+            m = folium.Map(location=[40.8128, -74.0742], zoom_start=16, tiles="CartoDB dark_matter")
+            folium.Marker([40.8128, -74.0742], popup="Stadium Center", icon=folium.Icon(color="blue", icon="info-sign")).add_to(m)
+            folium.Marker([40.8140, -74.0750], popup="Gate 1", icon=folium.Icon(color="green", icon="play")).add_to(m)
+            
+            st_folium(m, width="100%", height=500, returned_objects=[])
+        except ImportError:
+            st.error("Missing dependency: folium. Please ensure requirements are installed.")
 
-if __name__ == "__main__":
-    display_navigation()
+display_navigation()

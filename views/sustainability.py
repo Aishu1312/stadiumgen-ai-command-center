@@ -1,13 +1,9 @@
 import streamlit as st
-
-st.set_page_config(page_title="Sustainability", page_icon="🌱", layout="wide")
-
-from utils.session import init_session_state
-init_session_state()
 from components.ui import render_header, render_metric, show_loading_skeleton, render_toast
 from services.data_service import generate_sustainability_metrics
 from services.ai_service import generate_response_stream
 
+st.session_state.current_page_context = "User is on the Sustainability page, checking eco-metrics."
 
 def display_sustainability():
     render_header("Sustainability Intelligence", "Monitoring eco-friendly operations in real-time")
@@ -38,5 +34,4 @@ def display_sustainability():
         render_toast("Green Report Generated", "🌱")
     st.markdown("</div>", unsafe_allow_html=True)
 
-if __name__ == "__main__":
-    display_sustainability()
+display_sustainability()

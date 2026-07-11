@@ -10,43 +10,55 @@ st.set_page_config(
 )
 
 from components.ui import load_css
-from config.settings import settings
-
 from utils.session import init_session_state
+from config.settings import settings
 
 def main():
     init_session_state()
     
-    # Ensure style.css is loaded
+    # Ensure style.css is loaded globally
     current_dir = os.path.dirname(os.path.abspath(__file__))
     css_path = os.path.join(current_dir, "assets", "style.css")
     load_css(css_path)
+    
+    # Define pages for navigation
+    pages = {
+        "Main": [
+            st.Page("views/home.py", title="Home", icon="🏠", default=True),
+            st.Page("views/ai_assistant.py", title="AI Assistant", icon="🤖"),
+        ],
+        "Operations": [
+            st.Page("views/smart_navigation.py", title="Smart Navigation", icon="🗺️"),
+            st.Page("views/crowd_intelligence.py", title="Crowd Intelligence", icon="👥"),
+            st.Page("views/transport.py", title="Transport Planner", icon="🚍"),
+            st.Page("views/emergency_center.py", title="Emergency Center", icon="🚑"),
+        ],
+        "Management": [
+            st.Page("views/organizer_dashboard.py", title="Organizer Dashboard", icon="📊"),
+            st.Page("views/sustainability.py", title="Sustainability", icon="🌱"),
+            st.Page("views/accessibility.py", title="Accessibility", icon="♿"),
+        ],
+        "System": [
+            st.Page("views/settings.py", title="Settings", icon="⚙️"),
+        ]
+    }
 
-    st.markdown(f"<h1 style='text-align: center; font-size: 4rem; margin-top: 2rem;' class='gradient-text'>{settings.APP_NAME} ⚽</h1>", unsafe_allow_html=True)
-    st.markdown("<h3 style='text-align: center; color: #94a3b8;'>The Intelligent Stadium Companion powered by Generative AI</h3>", unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
+    # Initialize navigation
+    pg = st.navigation(pages)
+    
+    # Sidebar Global Elements
+    with st.sidebar:
+        st.markdown(f"## {settings.APP_NAME} ⚽")
+        st.markdown(f"**Version**: {settings.APP_VERSION}")
+        st.markdown("---")
+        st.info("💡 **Tip**: Use the AI Assistant for quick insights on any page.")
 
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        try:
-            st.image("assets/hero_image.png", use_column_width=True)
-        except Exception:
-            st.image("https://images.unsplash.com/photo-1518605368461-1e96f01df22e?q=80&w=800&auto=format&fit=crop", use_column_width=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown(
-        """
-        <div style='text-align: center;'>
-            <p style='font-size: 1.2rem; color: #cbd5e1;'>
-                Welcome to the future of stadium management. Use the sidebar to navigate through 
-                Smart Navigation, Crowd Intelligence, AI Transport Planner, and more.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.info("👈 Please select a module from the sidebar to begin.")
+    # Run the selected page
+    try:
+        pg.run()
+    except Exception as e:
+        st.error(f"An unexpected error occurred: {e}")
+        st.exception(e)
 
 if __name__ == "__main__":
     main()

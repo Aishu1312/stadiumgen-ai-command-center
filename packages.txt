@@ -1,1 +1,2 @@
-build-essential
+# OS level dependencies for Streamlit Cloud
+libffi-dev

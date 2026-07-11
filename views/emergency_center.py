@@ -1,13 +1,9 @@
 import streamlit as st
-
-st.set_page_config(page_title="Emergency Center", page_icon="🚑", layout="wide")
-
-from utils.session import init_session_state
-init_session_state()
 from components.ui import render_header, render_toast
 from services.data_service import generate_incidents
 from services.ai_service import generate_emergency_sop
 
+st.session_state.current_page_context = "User is on the Emergency Center page, monitoring live incidents and generating SOPs."
 
 def display_emergency():
     render_header("Emergency AI Command", "Live incident tracking and automated SOP generation")
@@ -45,5 +41,4 @@ def display_emergency():
                 st.warning("Please provide a location to generate the SOP.")
         st.markdown("</div>", unsafe_allow_html=True)
 
-if __name__ == "__main__":
-    display_emergency()
+display_emergency()
