@@ -11,7 +11,6 @@ import logging
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-@st.cache_resource
 def get_genai_model() -> Optional[Any]:
     """Initializes the Gemini model safely without hardcoded keys."""
     api_key = os.environ.get("GEMINI_API_KEY")
