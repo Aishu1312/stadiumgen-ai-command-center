@@ -40,7 +40,6 @@ class GeminiClient:
         self.is_configured = False
         self.config_error = None
         self.client = None
-        self.configure()
 
     def configure(self) -> None:
         """Initializes the Gemini model safely."""
@@ -64,6 +63,8 @@ class GeminiClient:
             self.is_configured = False
 
     def get_client(self) -> Optional[Any]:
+        if not self.is_configured:
+            self.configure()
         return self.client if self.is_configured else None
 
 client = GeminiClient()
@@ -99,11 +100,11 @@ def map_google_error(exc: Exception) -> str:
     before_sleep=ui_retry_callback
 )
 def _generate_response_inner(prompt: str, system_instruction: str = "", context: str = "") -> str:
-    if not client.is_configured:
-        return "Missing configuration"
-
     genai_client = client.get_client()
+    
     if not genai_client:
+        if client.config_error == "Missing configuration":
+            return "Missing configuration"
         return "Model unavailable"
     
     config_kwargs = {
@@ -183,13 +184,13 @@ def generate_response(prompt: str, system_instruction: str = "") -> str:
     before_sleep=ui_retry_callback
 )
 def _generate_response_stream_inner(prompt: str, system_instruction: str = "", context: str = "") -> Generator[str, None, None]:
-    if not client.is_configured:
-        yield "Missing configuration"
-        return
-
     genai_client = client.get_client()
+    
     if not genai_client:
-        yield "Model unavailable"
+        if client.config_error == "Missing configuration":
+            yield "Missing configuration"
+        else:
+            yield "Model unavailable"
         return
         
     config_kwargs = {
