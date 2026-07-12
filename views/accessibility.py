@@ -2,6 +2,8 @@ import streamlit as st
 import streamlit.components.v1 as components
 from components.ui import render_header, render_toast
 from services.ai_service import generate_response_stream
+from gtts import gTTS
+import io
 import logging
 
 logger = logging.getLogger(__name__)
@@ -179,21 +181,12 @@ def display_accessibility():
                 stream = generate_response_stream(prompt)
                 full_response = st.write_stream(stream)
                 
-                # Render a TTS button via HTML for the generated text
-                escaped_response = full_response.replace("'", "\\'").replace('"', '\\"').replace("\\n", " ")
-                tts_script = f"""
-                <div style="text-align: center; margin-top: 10px;">
-                    <button onclick="window.speechSynthesis.speak(new SpeechSynthesisUtterance('{escaped_response}'));" 
-                            style="padding: 10px 20px; border-radius: 5px; background-color: #007bff; color: white; border: none; cursor: pointer; font-size: 16px;">
-                        🔊 Read Aloud
-                    </button>
-                    <button onclick="window.speechSynthesis.cancel();" 
-                            style="padding: 10px 20px; border-radius: 5px; background-color: #dc3545; color: white; border: none; cursor: pointer; font-size: 16px; margin-left: 10px;">
-                        ⏹️ Stop
-                    </button>
-                </div>
-                """
-                components.html(tts_script, height=60)
+                # Generate robust TTS using python gTTS and render a native Streamlit audio player
+                # This bypasses iframe sandbox restrictions that block window.speechSynthesis
+                tts = gTTS(full_response, lang='en')
+                audio_fp = io.BytesIO()
+                tts.write_to_fp(audio_fp)
+                audio_bytes = audio_fp.getvalue()
                 
                 tts_success_html = """
                 <div style="
@@ -202,11 +195,11 @@ def display_accessibility():
                     border-radius: 12px;
                     padding: 16px;
                     margin-top: 15px;
+                    margin-bottom: 15px;
                     display: flex;
                     align-items: center;
                     gap: 15px;
                     box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-                    transition: transform 0.2s ease, box-shadow 0.2s ease;
                 ">
                     <div style="
                         background: linear-gradient(135deg, #28a745, #20c997);
@@ -224,11 +217,15 @@ def display_accessibility():
                     </div>
                     <div>
                         <h4 style="margin: 0; color: #28a745; font-size: 16px; font-weight: 600;">Text-to-Speech Ready</h4>
-                        <p style="margin: 4px 0 0 0; font-size: 14px; opacity: 0.8;">Click the <strong>Read Aloud</strong> button to begin audio playback.</p>
+                        <p style="margin: 4px 0 0 0; font-size: 14px; opacity: 0.8;">Use the audio player below to listen to the guide.</p>
                     </div>
                 </div>
                 """
                 st.markdown(tts_success_html, unsafe_allow_html=True)
+                
+                # Render native audio player. Note: True 'stop' is handled by the browser's native pause button.
+                # Streamlit's native st.audio is much more reliable than inline iframe JavaScript.
+                st.audio(audio_bytes, format="audio/mp3")
                 render_toast("Audio guide generated.", "✅")
             except Exception as e:
                 logger.error(f"Error generating accessibility guide: {e}")
@@ -318,7 +315,8 @@ def display_accessibility():
                 </div>
             </div>
         </a>
-        """
+        """,
+        unsafe_allow_html=True
     )
 
 display_accessibility()
