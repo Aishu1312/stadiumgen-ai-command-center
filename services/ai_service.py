@@ -16,10 +16,13 @@ class GeminiClient:
     """Centralized client for Google Gemini API."""
     def __init__(self):
         self.model_name = settings.DEFAULT_MODEL
-        self.generation_config = genai.types.GenerationConfig(
-            temperature=settings.TEMPERATURE,
-            max_output_tokens=settings.MAX_OUTPUT_TOKENS,
-        )
+        self.generation_config = {
+            "temperature": settings.TEMPERATURE,
+            "max_output_tokens": settings.MAX_OUTPUT_TOKENS,
+            "maxOutputTokens": settings.MAX_OUTPUT_TOKENS,
+            "max_tokens": settings.MAX_OUTPUT_TOKENS,
+            "maxTokens": settings.MAX_OUTPUT_TOKENS,
+        }
         self.is_configured = False
         self.configure()
 
