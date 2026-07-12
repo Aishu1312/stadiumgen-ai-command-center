@@ -41,6 +41,5 @@ def display_chat():
                 st.error("🚨 Error: An unexpected error occurred.")
             finally:
                 st.session_state.is_processing = False
-                st.rerun()
 
 display_chat()

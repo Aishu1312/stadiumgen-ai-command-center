@@ -12,14 +12,36 @@ from services.exceptions import AIError
 
 logger = logging.getLogger(__name__)
 
+import re
+from tenacity.wait import wait_base
+
+class wait_genai_rate_limit(wait_base):
+    def __init__(self, fallback_wait: wait_base):
+        self.fallback_wait = fallback_wait
+
+    def __call__(self, retry_state) -> float:
+        exc = retry_state.outcome.exception() if retry_state.outcome else None
+        if exc and isinstance(exc, genai_errors.ClientError):
+            code = getattr(exc, 'code', None)
+            if code == 429:
+                match = re.search(r'retry in (\d+(?:\.\d+)?)s', str(exc))
+                if match:
+                    return float(match.group(1)) + 1.0
+        return self.fallback_wait(retry_state)
+
 def ui_retry_callback(retry_state):
-    """Provides user-friendly feedback during exponential backoff retries."""
+    """Provides user-friendly feedback during retries."""
     exc = retry_state.outcome.exception()
     msg = "Retrying request..."
     if isinstance(exc, genai_errors.ClientError):
         code = getattr(exc, 'code', None)
         if code == 429:
-            msg = "Temporarily rate limited. Please wait a moment and try again."
+            match = re.search(r'retry in (\d+(?:\.\d+)?)s', str(exc))
+            if match:
+                delay = int(float(match.group(1)) + 1.0)
+                msg = f"Temporarily rate limited. Waiting {delay}s before retrying..."
+            else:
+                msg = "Temporarily rate limited. Please wait a moment and try again."
         else:
             msg = "Too many requests. Waiting before retrying."
     elif isinstance(exc, genai_errors.APIError):
@@ -107,7 +129,7 @@ def map_google_error(exc: Exception) -> str:
 
 @retry(
     stop=stop_after_attempt(settings.AI_RETRY_COUNT), 
-    wait=wait_exponential(multiplier=1, min=2, max=10),
+    wait=wait_genai_rate_limit(wait_exponential(multiplier=1, min=2, max=10)),
     retry=retry_if_exception_type((genai_errors.APIError, genai_errors.ClientError)),
     before_sleep=ui_retry_callback
 )
@@ -182,19 +204,18 @@ def generate_response(prompt: str, system_instruction: str = "") -> str:
 
 @retry(
     stop=stop_after_attempt(settings.AI_RETRY_COUNT), 
-    wait=wait_exponential(multiplier=1, min=2, max=10),
+    wait=wait_genai_rate_limit(wait_exponential(multiplier=1, min=2, max=10)),
     retry=retry_if_exception_type((genai_errors.APIError, genai_errors.ClientError)),
     before_sleep=ui_retry_callback
 )
-def _generate_response_stream_inner(prompt: str, system_instruction: str = "", context: str = "") -> Generator[str, None, None]:
+def _get_stream_and_first_chunk(prompt: str, system_instruction: str = "", context: str = ""):
     genai_client = client.get_client()
     
     if not genai_client:
         if client.config_error == "Missing configuration":
-            yield "Missing configuration"
+            return "Missing configuration", None
         else:
-            yield "Model unavailable"
-        return
+            return "Model unavailable", None
         
     config_kwargs = {
         "temperature": settings.TEMPERATURE,
@@ -206,37 +227,29 @@ def _generate_response_stream_inner(prompt: str, system_instruction: str = "", c
     config = types.GenerateContentConfig(**config_kwargs)
     full_prompt = f"{context}{prompt}"
     
+    response = genai_client.models.generate_content_stream(
+        model=client.model_name,
+        contents=full_prompt, 
+        config=config
+    )
+    
+    stream = iter(response)
     try:
-        response = genai_client.models.generate_content_stream(
-            model=client.model_name,
-            contents=full_prompt, 
-            config=config
-        )
-        has_yielded = False
-        for chunk in response:
-            try:
-                if chunk.text:
-                    has_yielded = True
-                    yield chunk.text
-            except ValueError:
-                pass
-        
-        if not has_yielded:
-            yield "Empty response"
-            
+        first_chunk_obj = next(stream)
+        first_chunk = first_chunk_obj.text if first_chunk_obj.text else ""
+        # Handle cases where the first chunk might be empty but valid
+        while not first_chunk:
+            first_chunk_obj = next(stream)
+            first_chunk = first_chunk_obj.text if first_chunk_obj.text else ""
+        return first_chunk, stream
+    except StopIteration:
+        return "Empty response", stream
     except genai_errors.ClientError as e:
         code = getattr(e, 'code', None)
         if code == 404:
             logger.error(f"Model {client.model_name} not found in stream: {e}")
-            yield "Model unavailable"
-        elif code == 429 or (code and code >= 500):
-            raise e  # Allow tenacity to retry
-        else:
-            yield map_google_error(e)
-    except genai_errors.APIError as e:
-        raise e  # Allow tenacity to retry
-    except Exception as e:
-        yield map_google_error(e)
+            return "Model unavailable", None
+        raise e  # Allow tenacity to retry 429s and 500s
 
 def generate_response_stream(prompt: str, system_instruction: str = "") -> Generator[str, None, None]:
     """Generates a streaming response for interactive chat UIs."""
@@ -248,8 +261,8 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
         context = f"Current Context: {st.session_state.current_page_context}\n\n"
 
     try:
-        stream = _generate_response_stream_inner(prompt, system_instruction, context)
-        first_chunk = next(stream)
+        first_chunk, stream = _get_stream_and_first_chunk(prompt, system_instruction, context)
+        
         if first_chunk in ["Missing configuration", "Model unavailable", "Empty response"]:
             if first_chunk == "Missing configuration":
                 raise AIError("Missing API credentials")
@@ -259,7 +272,15 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
                 raise AIError("Unexpected AI response")
         
         yield first_chunk
-        yield from stream
+        
+        if stream:
+            for chunk in stream:
+                try:
+                    if chunk.text:
+                        yield chunk.text
+                except ValueError:
+                    pass
+
     except StopIteration:
         pass
     except RetryError as e:

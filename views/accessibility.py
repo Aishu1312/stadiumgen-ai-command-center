@@ -199,7 +199,6 @@ def display_accessibility():
                         stream = generate_response_stream(prompt)
                         full_response = st.write_stream(stream)
                         st.session_state.acc_guide_text = full_response
-                    st.rerun()
                 except AIError as e:
                     logger.error(f"Error generating accessibility guide: {e}")
                     st.error(f"🚨 Error: {e}")
@@ -209,9 +208,11 @@ def display_accessibility():
                 finally:
                     st.session_state.is_processing = False
                 
-        if st.session_state.acc_guide_text:
+        elif st.session_state.acc_guide_text:
             st.markdown("##### Guide Script")
             st.markdown(st.session_state.acc_guide_text)
+            
+        if st.session_state.acc_guide_text:
             
             st.markdown("---")
             st.markdown("##### Text-to-Speech Ready")
