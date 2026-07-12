@@ -1,8 +1,8 @@
 import os
 import streamlit as st
-import google.generativeai as genai
-from google.generativeai.types import GenerationConfig
-from google.api_core import exceptions as google_exceptions
+from google import genai
+from google.genai import types
+from google.genai import errors as genai_errors
 from dotenv import load_dotenv
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, RetryError
 from config.settings import settings
@@ -18,12 +18,13 @@ def ui_retry_callback(retry_state):
     """Provides user-friendly feedback during exponential backoff retries."""
     exc = retry_state.outcome.exception()
     msg = "Connecting to AI... Retrying..."
-    if isinstance(exc, google_exceptions.ResourceExhausted):
-        if "quota" in str(exc).lower():
+    if isinstance(exc, genai_errors.ClientError):
+        code = getattr(exc, 'code', None)
+        if code == 429:
             msg = "The AI usage limit has been reached. Please try again later."
         else:
             msg = "Too many requests. Waiting before retrying."
-    elif isinstance(exc, google_exceptions.DeadlineExceeded):
+    elif isinstance(exc, genai_errors.APIError):
         msg = "The request took longer than expected. Retrying automatically..."
     
     logger.warning(f"AI Retry: {msg}")
@@ -33,41 +34,38 @@ def ui_retry_callback(retry_state):
         pass
 
 class GeminiClient:
-    """Centralized client for Google Gemini API."""
+    """Centralized client for Google Gemini API using google-genai."""
     def __init__(self):
         self.model_name = settings.DEFAULT_MODEL
-        self.generation_config = genai.types.GenerationConfig(
-            temperature=settings.TEMPERATURE,
-            max_output_tokens=settings.MAX_OUTPUT_TOKENS
-        )
         self.is_configured = False
         self.config_error = None
+        self.client = None
         self.configure()
 
     def configure(self) -> None:
-        """Initializes the Gemini model safely. Prioritizes ENV vars over secrets.toml for test compatibility."""
+        """Initializes the Gemini model safely."""
         api_key = None
         
-        # 1. Check secrets.toml first
         try:
             if "GEMINI_API_KEY" in st.secrets:
                 api_key = st.secrets["GEMINI_API_KEY"]
         except Exception:
             pass
             
-        # 2. Let OS Environment Variables OVERRIDE secrets.toml (critical for CI/CD test injections)
         env_key = os.environ.get("GEMINI_API_KEY")
         if env_key and env_key.strip() and env_key != "your_gemini_api_key_here":
             api_key = env_key
 
-        # 3. Fallback check
         if not api_key or api_key.strip() == "" or api_key == "your_gemini_api_key_here":
             self.config_error = "Missing configuration"
             self.is_configured = False
             return
 
         try:
-            genai.configure(api_key=api_key)
+            self.client = genai.Client(
+                api_key=api_key,
+                http_options={'timeout': settings.AI_TIMEOUT * 1000} # Optional depending on SDK version, we'll configure per-request if needed
+            )
             self.is_configured = True
             self.config_error = None
         except Exception as e:
@@ -75,43 +73,27 @@ class GeminiClient:
             self.config_error = "SDK configuration failed"
             self.is_configured = False
 
-    def get_model(self, fallback: bool = False) -> Optional[Any]:
-        if not self.is_configured:
-            return None
-        model_to_use = "gemini-1.5-flash-8b" if fallback else self.model_name
-        try:
-            # Removed safety_settings=None as it may crash older SDKs
-            return genai.GenerativeModel(
-                model_name=model_to_use,
-                generation_config=self.generation_config
-            )
-        except Exception as e:
-            logger.error(f"Failed to instantiate GenerativeModel ({model_to_use}): {e}")
-            return None
+    def get_client(self) -> Optional[Any]:
+        return self.client if self.is_configured else None
 
 client = GeminiClient()
 
-def get_genai_model() -> Optional[Any]:
-    return client.get_model()
-
 def map_google_error(exc: Exception) -> str:
     """Maps raw Google exceptions to exact user-friendly required strings."""
-    if isinstance(exc, google_exceptions.NotFound):
-        return "Unsupported model"
-    elif isinstance(exc, google_exceptions.PermissionDenied):
-        return "Invalid API credentials"
-    elif isinstance(exc, google_exceptions.ResourceExhausted):
-        if "quota" in str(exc).lower():
-            return "Rate limit reached"
-        return "Service temporarily unavailable"
-    elif isinstance(exc, google_exceptions.DeadlineExceeded):
-        return "Timeout"
-    elif isinstance(exc, google_exceptions.ServiceUnavailable):
-        return "Service temporarily unavailable"
-    elif isinstance(exc, google_exceptions.InvalidArgument):
-        if "API key" in str(exc) or "key" in str(exc).lower():
+    if isinstance(exc, genai_errors.ClientError):
+        code = getattr(exc, 'code', None)
+        if code == 404:
+            return "Unsupported model"
+        elif code in (401, 403):
             return "Invalid API credentials"
-        return "Configuration error"
+        elif code == 429:
+            return "Rate limit reached"
+        elif code == 400:
+            return "Configuration error"
+        else:
+            return "Service temporarily unavailable"
+    elif isinstance(exc, genai_errors.APIError):
+        return "Service temporarily unavailable"
     elif isinstance(exc, ValueError):
         return "Unexpected AI response"
     elif "timeout" in str(exc).lower():
@@ -123,35 +105,45 @@ def map_google_error(exc: Exception) -> str:
 @retry(
     stop=stop_after_attempt(settings.AI_RETRY_COUNT), 
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type((google_exceptions.ResourceExhausted, google_exceptions.ServiceUnavailable, google_exceptions.DeadlineExceeded)),
+    retry=retry_if_exception_type((genai_errors.APIError, genai_errors.ClientError)),
     before_sleep=ui_retry_callback
 )
 def _generate_response_inner(prompt: str, system_instruction: str = "", context: str = "") -> str:
     if not client.is_configured:
         return "Missing configuration"
 
-    model = client.get_model()
-    if not model:
+    genai_client = client.get_client()
+    if not genai_client:
         return "Model unavailable"
     
-    full_prompt = f"System: {system_instruction}\n{context}\nUser: {prompt}" if system_instruction else f"{context}{prompt}"
+    config_kwargs = {
+        "temperature": settings.TEMPERATURE,
+        "max_output_tokens": settings.MAX_OUTPUT_TOKENS
+    }
+    if system_instruction:
+        config_kwargs["system_instruction"] = system_instruction
+        
+    config = types.GenerateContentConfig(**config_kwargs)
+    full_prompt = f"{context}{prompt}"
     
     try:
-        response = model.generate_content(
-            full_prompt, 
-            request_options={"timeout": settings.AI_TIMEOUT}
+        response = genai_client.models.generate_content(
+            model=client.model_name,
+            contents=full_prompt, 
+            config=config
         )
         if not response.text:
             return "Empty response"
         return response.text
-    except google_exceptions.NotFound as e:
-        logger.error(f"Model {client.model_name} not found. Fallback: {e}")
-        fallback_model = client.get_model(fallback=True)
-        if fallback_model:
+    except genai_errors.ClientError as e:
+        code = getattr(e, 'code', None)
+        if code == 404:
+            logger.error(f"Model {client.model_name} not found. Fallback: {e}")
             try:
-                response = fallback_model.generate_content(
-                    full_prompt, 
-                    request_options={"timeout": settings.AI_TIMEOUT}
+                response = genai_client.models.generate_content(
+                    model="gemini-1.5-flash-8b",
+                    contents=full_prompt, 
+                    config=config
                 )
                 if not response.text:
                     return "Empty response"
@@ -159,8 +151,10 @@ def _generate_response_inner(prompt: str, system_instruction: str = "", context:
             except Exception as inner_e:
                 logger.error(f"Fallback model failed: {inner_e}")
                 return "Model unavailable"
-        return "Model unavailable"
-    except (google_exceptions.ResourceExhausted, google_exceptions.ServiceUnavailable, google_exceptions.DeadlineExceeded) as e:
+        if code == 429 or (code and code >= 500):
+            raise e  # Allow tenacity to handle the retry
+        return map_google_error(e)
+    except genai_errors.APIError as e:
         raise e  # Allow tenacity to handle the retry
     except Exception as e:
         return map_google_error(e)
@@ -195,7 +189,7 @@ def generate_response(prompt: str, system_instruction: str = "") -> str:
 @retry(
     stop=stop_after_attempt(settings.AI_RETRY_COUNT), 
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type((google_exceptions.ResourceExhausted, google_exceptions.ServiceUnavailable, google_exceptions.DeadlineExceeded)),
+    retry=retry_if_exception_type((genai_errors.APIError, genai_errors.ClientError)),
     before_sleep=ui_retry_callback
 )
 def _generate_response_stream_inner(prompt: str, system_instruction: str = "", context: str = "") -> Generator[str, None, None]:
@@ -203,18 +197,26 @@ def _generate_response_stream_inner(prompt: str, system_instruction: str = "", c
         yield "Missing configuration"
         return
 
-    model = client.get_model()
-    if not model:
+    genai_client = client.get_client()
+    if not genai_client:
         yield "Model unavailable"
         return
         
-    full_prompt = f"System: {system_instruction}\n{context}\nUser: {prompt}" if system_instruction else f"{context}{prompt}"
+    config_kwargs = {
+        "temperature": settings.TEMPERATURE,
+        "max_output_tokens": settings.MAX_OUTPUT_TOKENS
+    }
+    if system_instruction:
+        config_kwargs["system_instruction"] = system_instruction
+        
+    config = types.GenerateContentConfig(**config_kwargs)
+    full_prompt = f"{context}{prompt}"
     
     try:
-        response = model.generate_content(
-            full_prompt, 
-            stream=True, 
-            request_options={"timeout": settings.AI_TIMEOUT}
+        response = genai_client.models.generate_content_stream(
+            model=client.model_name,
+            contents=full_prompt, 
+            config=config
         )
         has_yielded = False
         for chunk in response:
@@ -228,15 +230,15 @@ def _generate_response_stream_inner(prompt: str, system_instruction: str = "", c
         if not has_yielded:
             yield "Empty response"
             
-    except google_exceptions.NotFound as e:
-        logger.error(f"Model {client.model_name} not found in stream. Fallback: {e}")
-        fallback_model = client.get_model(fallback=True)
-        if fallback_model:
+    except genai_errors.ClientError as e:
+        code = getattr(e, 'code', None)
+        if code == 404:
+            logger.error(f"Model {client.model_name} not found in stream. Fallback: {e}")
             try:
-                response = fallback_model.generate_content(
-                    full_prompt, 
-                    stream=True, 
-                    request_options={"timeout": settings.AI_TIMEOUT}
+                response = genai_client.models.generate_content_stream(
+                    model="gemini-1.5-flash-8b",
+                    contents=full_prompt, 
+                    config=config
                 )
                 has_yielded = False
                 for chunk in response:
@@ -251,9 +253,11 @@ def _generate_response_stream_inner(prompt: str, system_instruction: str = "", c
             except Exception as inner_e:
                 logger.error(f"Fallback model stream failed: {inner_e}")
                 yield "Model unavailable"
+        elif code == 429 or (code and code >= 500):
+            raise e  # Allow tenacity to retry
         else:
-            yield "Model unavailable"
-    except (google_exceptions.ResourceExhausted, google_exceptions.ServiceUnavailable, google_exceptions.DeadlineExceeded) as e:
+            yield map_google_error(e)
+    except genai_errors.APIError as e:
         raise e  # Allow tenacity to retry
     except Exception as e:
         yield map_google_error(e)
@@ -269,7 +273,6 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
 
     try:
         stream = _generate_response_stream_inner(prompt, system_instruction, context)
-        # We need to catch initial errors from the generator
         first_chunk = next(stream)
         if first_chunk in ["Missing configuration", "Model unavailable", "Empty response"]:
             if first_chunk == "Missing configuration":
