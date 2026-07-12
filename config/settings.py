@@ -18,7 +18,7 @@ class Settings:
     DEFAULT_LANGUAGE: str = "English"
     
     # AI Configuration
-    DEFAULT_MODEL: str = "gemini-2.5-flash"
+    DEFAULT_MODEL: str = "gemini-2.0-flash"
     TEMPERATURE: float = 0.7
     MAX_OUTPUT_TOKENS: int = 8192  # Increased to 8192 to prevent report truncation
     AI_TIMEOUT: int = 120  # Restored to 120s to allow complex report generation

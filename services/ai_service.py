@@ -55,6 +55,20 @@ class GeminiClient:
                 api_key=api_key,
                 http_options={'timeout': settings.AI_TIMEOUT * 1000} # Optional depending on SDK version, we'll configure per-request if needed
             )
+            
+            # Validate configured model without failing on network/quota errors
+            try:
+                supported_models = [m.name for m in self.client.models.list()]
+                expected_model_name = self.model_name if self.model_name.startswith("models/") else f"models/{self.model_name}"
+                
+                if expected_model_name not in supported_models:
+                    logger.error(f"Configured model {self.model_name} is unsupported. Available: {supported_models}")
+                    self.config_error = "Model unavailable"
+                    self.is_configured = False
+                    return
+            except Exception as e:
+                logger.warning(f"Could not validate model list during startup, proceeding: {e}")
+
             self.is_configured = True
             self.config_error = None
         except Exception as e:
@@ -129,22 +143,13 @@ def _generate_response_inner(prompt: str, system_instruction: str = "", context:
     except genai_errors.ClientError as e:
         code = getattr(e, 'code', None)
         if code == 404:
-            logger.error(f"Model {client.model_name} not found. Fallback: {e}")
-            try:
-                response = genai_client.models.generate_content(
-                    model="gemini-1.5-flash-8b",
-                    contents=full_prompt, 
-                    config=config
-                )
-                if not response.text:
-                    return "Empty response"
-                return response.text
-            except Exception as inner_e:
-                logger.error(f"Fallback model failed: {inner_e}")
-                return "Model unavailable"
-        if code == 429 or (code and code >= 500):
+            logger.error(f"Model {client.model_name} not found: {e}")
+            return "Model unavailable"
+        elif code == 429 or (code and code >= 500):
+            logger.warning(f"ClientError: {e}")
             raise e  # Allow tenacity to handle the retry
-        return map_google_error(e)
+        else:
+            return map_google_error(e)
     except genai_errors.APIError as e:
         raise e  # Allow tenacity to handle the retry
     except Exception as e:
@@ -224,26 +229,8 @@ def _generate_response_stream_inner(prompt: str, system_instruction: str = "", c
     except genai_errors.ClientError as e:
         code = getattr(e, 'code', None)
         if code == 404:
-            logger.error(f"Model {client.model_name} not found in stream. Fallback: {e}")
-            try:
-                response = genai_client.models.generate_content_stream(
-                    model="gemini-1.5-flash-8b",
-                    contents=full_prompt, 
-                    config=config
-                )
-                has_yielded = False
-                for chunk in response:
-                    try:
-                        if chunk.text:
-                            has_yielded = True
-                            yield chunk.text
-                    except ValueError:
-                        pass
-                if not has_yielded:
-                    yield "Empty response"
-            except Exception as inner_e:
-                logger.error(f"Fallback model stream failed: {inner_e}")
-                yield "Model unavailable"
+            logger.error(f"Model {client.model_name} not found in stream: {e}")
+            yield "Model unavailable"
         elif code == 429 or (code and code >= 500):
             raise e  # Allow tenacity to retry
         else:
