@@ -73,7 +73,7 @@ class GeminiClient:
         try:
             self.client = genai.Client(
                 api_key=api_key,
-                http_options={'timeout': 30}
+                http_options={'timeout': settings.AI_TIMEOUT * 1000}
             )
             
             # Validate configured model without failing on network/quota errors
@@ -116,16 +116,16 @@ def map_google_error(exc: Exception) -> str:
         elif code == 400:
             return "Configuration error"
         else:
-            return "Service temporarily unavailable"
+            return "The AI service is currently unavailable. Please try again later."
     elif isinstance(exc, genai_errors.APIError):
-        return "Service temporarily unavailable"
+        return "The AI service is currently unavailable. Please try again later."
     elif isinstance(exc, ValueError):
         return "Unexpected AI response"
-    elif "timeout" in str(exc).lower():
-        return "Timeout"
+    elif "timeout" in str(exc.__class__.__name__).lower() or "timeout" in str(exc).lower():
+        return "The AI service took too long to respond. Please try again later."
     
     logger.error(f"Unhandled AI exception: {str(exc)}", exc_info=True)
-    return "Service temporarily unavailable"
+    return "The AI service is currently unavailable. Please try again later."
 
 @st.cache_data(ttl=settings.CACHE_TTL, show_spinner=False)
 @retry(
