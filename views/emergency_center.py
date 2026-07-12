@@ -1,7 +1,8 @@
 import streamlit as st
 from components.ui import render_header, render_toast
 from services.data_service import generate_incidents
-from services.ai_service import generate_emergency_sop, AIError
+from services.ai_service import generate_emergency_sop
+from services.exceptions import AIError
 
 st.session_state.current_page_context = "User is on the Emergency Center page, monitoring live incidents and generating SOPs."
 

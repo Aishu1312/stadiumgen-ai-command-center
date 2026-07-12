@@ -1,7 +1,8 @@
 import streamlit as st
 import streamlit.components.v1 as components
 from components.ui import render_header, render_toast
-from services.ai_service import generate_response_stream, AIError
+from services.ai_service import generate_response_stream
+from services.exceptions import AIError
 from gtts import gTTS
 import io
 import logging

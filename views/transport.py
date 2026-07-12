@@ -1,7 +1,8 @@
 import streamlit as st
 from components.ui import render_header, render_toast, show_loading_skeleton
 from services.data_service import generate_transport_data
-from services.ai_service import generate_response_stream, AIError
+from services.ai_service import generate_response_stream
+from services.exceptions import AIError
 
 st.session_state.current_page_context = "User is viewing the Transport Planner page to check train/bus statuses and ask for travel advice."
 

@@ -1,7 +1,8 @@
 import streamlit as st
 from components.ui import render_header, render_metric, show_loading_skeleton, render_toast
 from services.data_service import generate_sustainability_metrics
-from services.ai_service import generate_response, AIError
+from services.ai_service import generate_response
+from services.exceptions import AIError
 
 st.session_state.current_page_context = "User is on the Sustainability page, checking eco-metrics."
 

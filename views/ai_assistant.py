@@ -1,5 +1,6 @@
 import streamlit as st
-from services.ai_service import generate_response_stream, AIError
+from services.ai_service import generate_response_stream
+from services.exceptions import AIError
 from components.ui import render_header
 
 st.session_state.current_page_context = "User is currently using the dedicated AI Assistant page for general stadium queries."

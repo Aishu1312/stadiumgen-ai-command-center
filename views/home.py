@@ -1,7 +1,8 @@
 import streamlit as st
 from components.ui import render_header, render_metric, show_loading_skeleton, render_toast
 from services.data_service import generate_sustainability_metrics
-from services.ai_service import generate_response_stream, AIError
+from services.ai_service import generate_response_stream
+from services.exceptions import AIError
 
 # Set context for AI Assistant
 st.session_state.current_page_context = "User is currently on the Home page, viewing the high-level dashboard and quick actions."

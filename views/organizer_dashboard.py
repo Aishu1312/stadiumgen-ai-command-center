@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 from components.ui import render_header, render_metric, show_loading_skeleton
-from services.ai_service import generate_response_stream, AIError
+from services.ai_service import generate_response_stream
+from services.exceptions import AIError
 from config.constants import Prompts
 
 st.session_state.current_page_context = "User is on the Organizer Dashboard, viewing high-level metrics and predicting footfall."

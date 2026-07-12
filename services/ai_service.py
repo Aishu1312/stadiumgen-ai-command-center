@@ -9,9 +9,7 @@ from config.settings import settings
 from config.constants import Prompts
 from typing import Generator, Any, Optional
 import logging
-
-class AIError(Exception):
-    pass
+from services.exceptions import AIError
 
 load_dotenv()
 logger = logging.getLogger(__name__)
