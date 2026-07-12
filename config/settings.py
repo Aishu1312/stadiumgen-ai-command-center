@@ -13,6 +13,9 @@ class Settings:
     DEFAULT_MODEL: str = "gemini-2.5-flash"
     MAX_OUTPUT_TOKENS: int = 4096
     TEMPERATURE: float = 0.7
+    AI_TIMEOUT: int = 120
+    AI_RETRY_COUNT: int = 3
+    AI_SAFETY_SETTINGS: Any = None
     
     # UI Theme Settings
     THEME_COLORS: Dict[str, str] = {
