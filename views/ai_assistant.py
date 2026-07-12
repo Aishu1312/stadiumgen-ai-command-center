@@ -31,8 +31,8 @@ def display_chat():
             
             st.session_state.is_processing = True
             try:
-                # Stream the response natively
-                response_stream = generate_response_stream(prompt, system_instruction=sys_prompt)
+                with st.spinner("Connecting to AI..."):
+                    response_stream = generate_response_stream(prompt, system_instruction=sys_prompt)
                 full_response = st.write_stream(response_stream)
                 st.session_state.messages.append({"role": "assistant", "content": full_response})
             except AIError as e:

@@ -40,7 +40,7 @@ def display_transport():
                         st.markdown("#### Recommendations")
                         prompt = f"Provide a travel recommendation from {user_loc} to the World Cup Stadium. Suggest the fastest route, the most eco-friendly route, and expected travel time."
                         
-                        with st.spinner("Generating response..."):
+                        with st.spinner("Connecting to AI..."):
                             # Streaming the AI response natively
                             stream = generate_response_stream(prompt)
                             st.write_stream(stream)

@@ -195,7 +195,7 @@ def display_accessibility():
                     st.markdown("##### Guide Script")
                     prompt = f"Provide a clear, easy-to-understand, step-by-step guide on: {guidance_topic}. Use simple language suitable for cognitive accessibility. Keep it under 150 words."
                     
-                    with st.spinner("Generating accessibility guide..."):
+                    with st.spinner("Connecting to AI..."):
                         stream = generate_response_stream(prompt)
                         full_response = st.write_stream(stream)
                         st.session_state.acc_guide_text = full_response

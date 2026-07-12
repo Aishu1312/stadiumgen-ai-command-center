@@ -58,7 +58,7 @@ def display_sustainability():
                 Ensure the report reads naturally from start to finish with no incomplete sentences or truncation. Every sentence must end correctly with proper punctuation. Never allow unfinished text or abrupt endings.
                 """
                 
-                with st.spinner("Generating comprehensive report..."):
+                with st.spinner("Generating response..."):
                     response = generate_response(prompt)
                     st.markdown(response)
                     render_toast("Green Report Generated", "🌱")

@@ -39,13 +39,13 @@ def ui_retry_callback(retry_state):
             match = re.search(r'retry in (\d+(?:\.\d+)?)s', str(exc))
             if match:
                 delay = int(float(match.group(1)) + 1.0)
-                msg = f"Temporarily rate limited. Waiting {delay}s before retrying..."
+                msg = f"Waiting before retry... {delay}s"
             else:
-                msg = "Temporarily rate limited. Please wait a moment and try again."
+                msg = "Waiting before retry..."
         else:
-            msg = "Too many requests. Waiting before retrying."
+            msg = "Retrying request..."
     elif isinstance(exc, genai_errors.APIError):
-        msg = "The request took longer than expected. Retrying automatically..."
+        msg = "Retrying request..."
     
     logger.warning(f"AI Retry: {msg}")
     try:

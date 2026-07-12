@@ -39,7 +39,7 @@ def display_emergency():
                 else:
                     st.session_state.is_processing = True
                     try:
-                        with st.spinner("AI is generating Emergency SOP..."):
+                        with st.spinner("Generating response..."):
                             sop = generate_emergency_sop(incident_type, location)
                             st.error("🚨 EMERGENCY SOP GENERATED 🚨")
                             st.markdown(sop)

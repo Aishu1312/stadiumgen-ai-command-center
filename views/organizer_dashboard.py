@@ -52,7 +52,7 @@ def display_organizer():
                     st.session_state.is_processing = True
                     try:
                         st.markdown("#### Insight")
-                        with st.spinner("Generating insight..."):
+                        with st.spinner("Connecting to AI..."):
                             stream = generate_response_stream(question, system_instruction=Prompts.SYSTEM_ORGANIZER_INSIGHTS)
                             st.write_stream(stream)
                     except AIError as e:
