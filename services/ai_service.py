@@ -36,12 +36,7 @@ def ui_retry_callback(retry_state):
     if isinstance(exc, genai_errors.ClientError):
         code = getattr(exc, 'code', None)
         if code == 429:
-            match = re.search(r'retry in (\d+(?:\.\d+)?)s', str(exc))
-            if match:
-                delay = int(float(match.group(1)) + 1.0)
-                msg = f"Waiting before retry... {delay}s"
-            else:
-                msg = "Waiting before retry..."
+            msg = "Waiting before retry..."
         else:
             msg = "Retrying request..."
     elif isinstance(exc, genai_errors.APIError):
