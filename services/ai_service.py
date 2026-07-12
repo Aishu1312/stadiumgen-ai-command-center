@@ -16,10 +16,10 @@ class GeminiClient:
     """Centralized client for Google Gemini API."""
     def __init__(self):
         self.model_name = settings.DEFAULT_MODEL
-        self.generation_config = {
-            "temperature": settings.TEMPERATURE,
-            "max_output_tokens": settings.MAX_OUTPUT_TOKENS,
-        }
+        self.generation_config = genai.types.GenerationConfig(
+            temperature=settings.TEMPERATURE,
+            max_output_tokens=settings.MAX_OUTPUT_TOKENS,
+        )
         self.is_configured = False
         self.configure()
 
@@ -88,19 +88,22 @@ def generate_response(prompt: str, system_instruction: str = "") -> str:
     full_prompt = f"System: {system_instruction}\n{context}\nUser: {prompt}" if system_instruction else f"{context}{prompt}"
     
     try:
-        response = model.generate_content(full_prompt, request_options={"timeout": 30})
+        response = model.generate_content(full_prompt, request_options={"timeout": 120})
         return response.text if response.text else "🚨 Error: Empty response from AI."
     except google_exceptions.NotFound as e:
         logger.error(f"Model {client.model_name} not found. Attempting fallback to gemini-2.5-flash-lite: {e}")
         fallback_model = client.get_model(fallback=True)
         if fallback_model:
             try:
-                response = fallback_model.generate_content(full_prompt, request_options={"timeout": 30})
+                response = fallback_model.generate_content(full_prompt, request_options={"timeout": 120})
                 return response.text if response.text else "🚨 Error: Empty response from AI."
             except Exception as inner_e:
                 logger.error(f"Fallback model failed: {inner_e}")
                 return f"🚨 Error communicating with AI: Fallback model also failed."
         return f"🚨 Error: Configured model not found and fallback unavailable."
+    except (google_exceptions.ResourceExhausted, google_exceptions.ServiceUnavailable, google_exceptions.DeadlineExceeded) as e:
+        logger.warning(f"Retryable error in generate_response: {e}")
+        raise e  # Let tenacity catch and retry
     except Exception as e:
         logger.error(f"Error in generate_response: {e}")
         return f"🚨 Error communicating with AI: Please check your API limits or network connection."
