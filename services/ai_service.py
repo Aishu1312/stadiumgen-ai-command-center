@@ -88,14 +88,22 @@ def generate_response(prompt: str, system_instruction: str = "") -> str:
     full_prompt = f"System: {system_instruction}\n{context}\nUser: {prompt}" if system_instruction else f"{context}{prompt}"
     
     try:
-        response = model.generate_content(full_prompt, request_options={"timeout": 120})
+        response = model.generate_content(
+            full_prompt, 
+            generation_config={"max_output_tokens": 8192}, 
+            request_options={"timeout": 120}
+        )
         return response.text if response.text else "🚨 Error: Empty response from AI."
     except google_exceptions.NotFound as e:
         logger.error(f"Model {client.model_name} not found. Attempting fallback to gemini-2.5-flash-lite: {e}")
         fallback_model = client.get_model(fallback=True)
         if fallback_model:
             try:
-                response = fallback_model.generate_content(full_prompt, request_options={"timeout": 120})
+                response = fallback_model.generate_content(
+                    full_prompt, 
+                    generation_config={"max_output_tokens": 8192},
+                    request_options={"timeout": 120}
+                )
                 return response.text if response.text else "🚨 Error: Empty response from AI."
             except Exception as inner_e:
                 logger.error(f"Fallback model failed: {inner_e}")
@@ -133,7 +141,12 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
     full_prompt = f"System: {system_instruction}\n{context}\nUser: {prompt}" if system_instruction else f"{context}{prompt}"
     
     try:
-        response = model.generate_content(full_prompt, stream=True, request_options={"timeout": 120})
+        response = model.generate_content(
+            full_prompt, 
+            stream=True, 
+            generation_config={"max_output_tokens": 8192},
+            request_options={"timeout": 120}
+        )
         for chunk in response:
             try:
                 if chunk.text:
@@ -146,7 +159,12 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
         fallback_model = client.get_model(fallback=True)
         if fallback_model:
             try:
-                response = fallback_model.generate_content(full_prompt, stream=True, request_options={"timeout": 120})
+                response = fallback_model.generate_content(
+                    full_prompt, 
+                    stream=True, 
+                    generation_config={"max_output_tokens": 8192},
+                    request_options={"timeout": 120}
+                )
                 for chunk in response:
                     try:
                         if chunk.text:
