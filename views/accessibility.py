@@ -173,63 +173,64 @@ def display_accessibility():
             help="Choose a topic to receive a simplified, step-by-step audio-ready script."
         )
         
+        if "acc_guide_text" not in st.session_state:
+            st.session_state.acc_guide_text = ""
+        if "acc_audio_bytes" not in st.session_state:
+            st.session_state.acc_audio_bytes = None
+        if "acc_play_audio" not in st.session_state:
+            st.session_state.acc_play_audio = False
+            
         if st.button("Generate Explanation", use_container_width=True):
+            st.session_state.acc_guide_text = ""
+            st.session_state.acc_audio_bytes = None
+            st.session_state.acc_play_audio = False
+            
             st.markdown("##### Guide Script")
             prompt = f"Provide a clear, easy-to-understand, step-by-step guide on: {guidance_topic}. Use simple language suitable for cognitive accessibility. Keep it under 150 words."
             
             try:
                 stream = generate_response_stream(prompt)
                 full_response = st.write_stream(stream)
-                
-                # Generate robust TTS using python gTTS and render a native Streamlit audio player
-                # This bypasses iframe sandbox restrictions that block window.speechSynthesis
-                tts = gTTS(full_response, lang='en')
-                audio_fp = io.BytesIO()
-                tts.write_to_fp(audio_fp)
-                audio_bytes = audio_fp.getvalue()
-                
-                tts_success_html = """
-                <div style="
-                    background: linear-gradient(135deg, rgba(40,167,69,0.1) 0%, rgba(32,201,151,0.1) 100%);
-                    border: 1px solid rgba(40,167,69,0.3);
-                    border-radius: 12px;
-                    padding: 16px;
-                    margin-top: 15px;
-                    margin-bottom: 15px;
-                    display: flex;
-                    align-items: center;
-                    gap: 15px;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-                ">
-                    <div style="
-                        background: linear-gradient(135deg, #28a745, #20c997);
-                        color: white;
-                        width: 40px;
-                        height: 40px;
-                        border-radius: 50%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 20px;
-                        box-shadow: 0 4px 10px rgba(40,167,69,0.3);
-                    ">
-                        🔊
-                    </div>
-                    <div>
-                        <h4 style="margin: 0; color: #28a745; font-size: 16px; font-weight: 600;">Text-to-Speech Ready</h4>
-                        <p style="margin: 4px 0 0 0; font-size: 14px; opacity: 0.8;">Use the audio player below to listen to the guide.</p>
-                    </div>
-                </div>
-                """
-                st.markdown(tts_success_html, unsafe_allow_html=True)
-                
-                # Render native audio player. Note: True 'stop' is handled by the browser's native pause button.
-                # Streamlit's native st.audio is much more reliable than inline iframe JavaScript.
-                st.audio(audio_bytes, format="audio/mp3")
-                render_toast("Audio guide generated.", "✅")
+                st.session_state.acc_guide_text = full_response
+                st.rerun()
             except Exception as e:
                 logger.error(f"Error generating accessibility guide: {e}")
                 st.error("Failed to generate the guide. Please check your AI API key configuration.")
+                
+        if st.session_state.acc_guide_text:
+            st.markdown("##### Guide Script")
+            st.markdown(st.session_state.acc_guide_text)
+            
+            st.markdown("---")
+            st.markdown("##### Text-to-Speech Ready")
+            st.markdown("Click the Read Aloud button to begin audio playback.")
+            
+            col_play, col_stop = st.columns(2)
+            with col_play:
+                if st.button("🔊 Read Aloud", use_container_width=True):
+                    st.session_state.acc_play_audio = True
+                    if not st.session_state.acc_audio_bytes:
+                        try:
+                            with st.spinner("Generating audio..."):
+                                tts = gTTS(st.session_state.acc_guide_text, lang='en')
+                                audio_fp = io.BytesIO()
+                                tts.write_to_fp(audio_fp)
+                                st.session_state.acc_audio_bytes = audio_fp.getvalue()
+                        except Exception as e:
+                            logger.error(f"gTTS error: {e}")
+                            st.error("Could not generate audio.")
+                            st.session_state.acc_play_audio = False
+
+            with col_stop:
+                if st.button("⏹️ Stop", use_container_width=True):
+                    # Streamlit limitation: Browser autoplay restrictions and limited JS interop mean we cannot invoke 
+                    # a true 'stop' method on an active st.audio component mid-playback.
+                    # By toggling acc_play_audio to False, Streamlit unmounts the component on rerun, effectively resetting it.
+                    st.session_state.acc_play_audio = False
+
+            if st.session_state.acc_play_audio and st.session_state.acc_audio_bytes:
+                st.audio(st.session_state.acc_audio_bytes, format="audio/mp3", autoplay=True)
+                render_toast("Audio is playing...", "🔊")
                 
         st.markdown("</div>", unsafe_allow_html=True)
         
@@ -281,42 +282,40 @@ def display_accessibility():
     
     # Task 3: GitHub Repository Section
     st.markdown("### 📂 Project Repository")
-    st.markdown(
-        """
-        <a href="https://github.com/Aishu1312/banknova-ai-digital-wealth-management" target="_blank" style="text-decoration: none;">
-            <div style="
-                background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 16px;
-                padding: 24px;
-                display: flex;
-                align-items: center;
-                gap: 20px;
-                box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-                transition: transform 0.2s ease, box-shadow 0.2s ease;
-                cursor: pointer;
-            " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 15px 35px rgba(0,0,0,0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 25px rgba(0,0,0,0.2)';">
-                <div style="
-                    background: rgba(255,255,255,0.1);
-                    width: 50px;
-                    height: 50px;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                ">
-                    <svg height="32" viewBox="0 0 16 16" width="32" fill="white">
-                        <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
-                    </svg>
-                </div>
-                <div style="flex: 1;">
-                    <h4 style="margin: 0; color: #ffffff; font-size: 18px; font-weight: 600;">BankNova AI Digital Wealth Management</h4>
-                    <p style="margin: 6px 0 0 0; color: rgba(255,255,255,0.7); font-size: 14px;">Explore the source code on GitHub ↗</p>
-                </div>
-            </div>
-        </a>
-        """,
-        unsafe_allow_html=True
-    )
+    repo_html = """
+<a href="https://github.com/Aishu1312/banknova-ai-digital-wealth-management" target="_blank" style="text-decoration: none;">
+    <div style="
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 24px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: pointer;
+    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 15px 35px rgba(0,0,0,0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 25px rgba(0,0,0,0.2)';">
+        <div style="
+            background: rgba(255,255,255,0.1);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        ">
+            <svg height="32" viewBox="0 0 16 16" width="32" fill="white">
+                <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+            </svg>
+        </div>
+        <div style="flex: 1;">
+            <h4 style="margin: 0; color: #ffffff; font-size: 18px; font-weight: 600;">BankNova AI Digital Wealth Management</h4>
+            <p style="margin: 6px 0 0 0; color: rgba(255,255,255,0.7); font-size: 14px;">Explore the source code on GitHub ↗</p>
+        </div>
+    </div>
+</a>
+"""
+    st.markdown(repo_html, unsafe_allow_html=True)
 
 display_accessibility()
