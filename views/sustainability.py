@@ -36,14 +36,17 @@ def display_sustainability():
         The report must include exactly the following sections with proper markdown headings and bullet points:
         # Sustainability Report
         ## Executive Summary
-        ## Energy Efficiency
-        ## Carbon Footprint
+        ## Energy Savings
+        ## Carbon Emission Reduction
         ## Water Conservation
         ## Waste Management
-        ## AI Insights
-        ## Recommendations
-        ## Future Outlook
-        ## Conclusion
+        ## Renewable Energy Usage
+        ## Attendance Insights
+        ## Operational Highlights
+        ## AI Recommendations
+        ## Future Sustainability Goals
+        ## Overall Performance Rating
+        ## Closing Summary
         
         Ensure the report reads naturally from start to finish with no incomplete sentences or truncation. Every sentence must end correctly with proper punctuation. Never allow unfinished text or abrupt endings.
         """
