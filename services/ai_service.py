@@ -50,7 +50,7 @@ class GeminiClient:
     def get_model(self, fallback: bool = False) -> Optional[Any]:
         if not self.is_configured:
             return None
-        model_to_use = "gemini-pro" if fallback else self.model_name
+        model_to_use = "gemini-1.5-flash-8b" if fallback else self.model_name
         try:
             return genai.GenerativeModel(
                 model_name=model_to_use,

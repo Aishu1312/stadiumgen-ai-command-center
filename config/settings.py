@@ -10,7 +10,7 @@ class Settings:
     DEFAULT_LANGUAGE: str = "English"
     
     # AI Settings
-    DEFAULT_MODEL: str = "gemini-pro"
+    DEFAULT_MODEL: str = "gemini-1.5-flash"
     MAX_OUTPUT_TOKENS: int = 1024
     TEMPERATURE: float = 0.7
     
