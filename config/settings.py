@@ -8,6 +8,7 @@ class Settings:
     # UI Configuration
     THEME_COLOR: str = "#4CAF50"
     COMPANY_NAME: str = "StadiumGen AI"
+    DEFAULT_LANGUAGE: str = "English"
     
     # AI Configuration
     DEFAULT_MODEL: str = "gemini-2.5-flash"
