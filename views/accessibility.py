@@ -195,7 +195,40 @@ def display_accessibility():
                 """
                 components.html(tts_script, height=60)
                 
-                st.success("🔊 Text-to-Speech is ready. Click the Read Aloud button above.")
+                tts_success_html = """
+                <div style="
+                    background: linear-gradient(135deg, rgba(40,167,69,0.1) 0%, rgba(32,201,151,0.1) 100%);
+                    border: 1px solid rgba(40,167,69,0.3);
+                    border-radius: 12px;
+                    padding: 16px;
+                    margin-top: 15px;
+                    display: flex;
+                    align-items: center;
+                    gap: 15px;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                ">
+                    <div style="
+                        background: linear-gradient(135deg, #28a745, #20c997);
+                        color: white;
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 20px;
+                        box-shadow: 0 4px 10px rgba(40,167,69,0.3);
+                    ">
+                        🔊
+                    </div>
+                    <div>
+                        <h4 style="margin: 0; color: #28a745; font-size: 16px; font-weight: 600;">Text-to-Speech Ready</h4>
+                        <p style="margin: 4px 0 0 0; font-size: 14px; opacity: 0.8;">Click the <strong>Read Aloud</strong> button to begin audio playback.</p>
+                    </div>
+                </div>
+                """
+                st.markdown(tts_success_html, unsafe_allow_html=True)
                 render_toast("Audio guide generated.", "✅")
             except Exception as e:
                 logger.error(f"Error generating accessibility guide: {e}")
@@ -217,12 +250,75 @@ def display_accessibility():
     st.markdown("### 🗺️ Accessibility Maps")
     st.markdown("We are committed to providing an inclusive environment. View our accessible zones below.")
     try:
-        # Fixed use_column_width deprecation by changing to use_container_width
-        st.image("https://images.unsplash.com/photo-1579294528148-18e38d4e9411?q=80&w=600&auto=format&fit=crop", 
-                 caption="Wheelchair Accessible Zones and Sensory Rooms", 
+        # Wrap the image in a styled div
+        st.markdown(
+            """
+            <style>
+            .map-container {
+                border-radius: 16px;
+                overflow: hidden;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                border: 1px solid rgba(255,255,255,0.1);
+                margin: 20px 0;
+            }
+            .map-container img {
+                transition: transform 0.3s ease;
+            }
+            .map-container:hover img {
+                transform: scale(1.02);
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+        st.markdown('<div class="map-container">', unsafe_allow_html=True)
+        st.image("assets/accessibility_map.png", 
+                 caption="Premium Stadium Accessibility Map & Inclusive Zones", 
                  use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
     except Exception as e:
         logger.error(f"Failed to load accessibility map image: {e}")
         st.warning("Accessibility map image is currently unavailable.")
+
+    st.markdown("---")
+    
+    # Task 3: GitHub Repository Section
+    st.markdown("### 📂 Project Repository")
+    st.markdown(
+        """
+        <a href="https://github.com/Aishu1312/banknova-ai-digital-wealth-management" target="_blank" style="text-decoration: none;">
+            <div style="
+                background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 16px;
+                padding: 24px;
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+                cursor: pointer;
+            " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 15px 35px rgba(0,0,0,0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 25px rgba(0,0,0,0.2)';">
+                <div style="
+                    background: rgba(255,255,255,0.1);
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">
+                    <svg height="32" viewBox="0 0 16 16" width="32" fill="white">
+                        <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                    </svg>
+                </div>
+                <div style="flex: 1;">
+                    <h4 style="margin: 0; color: #ffffff; font-size: 18px; font-weight: 600;">BankNova AI Digital Wealth Management</h4>
+                    <p style="margin: 6px 0 0 0; color: rgba(255,255,255,0.7); font-size: 14px;">Explore the source code on GitHub ↗</p>
+                </div>
+            </div>
+        </a>
+        """
+    )
 
 display_accessibility()
