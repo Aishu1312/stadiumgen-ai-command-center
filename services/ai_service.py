@@ -3,7 +3,6 @@ import streamlit as st
 from google import genai
 from google.genai import types
 from google.genai import errors as genai_errors
-from dotenv import load_dotenv
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, RetryError
 from config.settings import settings
 from config.constants import Prompts
@@ -11,17 +10,16 @@ from typing import Generator, Any, Optional
 import logging
 from services.exceptions import AIError
 
-load_dotenv()
 logger = logging.getLogger(__name__)
 
 def ui_retry_callback(retry_state):
     """Provides user-friendly feedback during exponential backoff retries."""
     exc = retry_state.outcome.exception()
-    msg = "Connecting to AI... Retrying..."
+    msg = "Retrying request..."
     if isinstance(exc, genai_errors.ClientError):
         code = getattr(exc, 'code', None)
         if code == 429:
-            msg = "The AI usage limit has been reached. Please try again later."
+            msg = "Temporarily rate limited. Please wait a moment and try again."
         else:
             msg = "Too many requests. Waiting before retrying."
     elif isinstance(exc, genai_errors.APIError):
@@ -92,7 +90,7 @@ def map_google_error(exc: Exception) -> str:
         elif code in (401, 403):
             return "Invalid API credentials"
         elif code == 429:
-            return "Rate limit reached"
+            return "Temporarily rate limited. Please wait a moment and try again."
         elif code == 400:
             return "Configuration error"
         else:
@@ -272,11 +270,13 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
     except Exception as e:
         raise AIError(map_google_error(e))
 
+@st.cache_data(ttl=settings.CACHE_TTL, show_spinner=False)
 def translate_text(text: str, target_language: str) -> str:
     """Translates text using Gemini."""
     prompt = f"Translate the following text to {target_language}. Return ONLY the translation, no extra text.\n\n{text}"
     return generate_response(prompt)
 
+@st.cache_data(ttl=settings.CACHE_TTL, show_spinner=False)
 def generate_emergency_sop(incident_type: str, location: str) -> str:
     """Generates an Emergency Standard Operating Procedure."""
     prompt = f"Generate a concise, 5-step Emergency Standard Operating Procedure (SOP) for a {incident_type} incident at {location} in a busy stadium."

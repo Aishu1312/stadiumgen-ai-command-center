@@ -29,20 +29,28 @@ def display_transport():
         st.markdown("### 🤖 Ask AI for Travel Advice")
         user_loc = st.text_input("Your Location:", placeholder="e.g., Downtown Hotel")
         
-        if st.button("Generate Recommendation", use_container_width=True):
+        is_processing = st.session_state.get('is_processing', False)
+        if st.button("Generate Recommendation", use_container_width=True, disabled=is_processing):
             if user_loc:
-                st.markdown("#### Recommendations")
-                prompt = f"Provide a travel recommendation from {user_loc} to the World Cup Stadium. Suggest the fastest route, the most eco-friendly route, and expected travel time."
-                
-                try:
-                    # Streaming the AI response natively
-                    stream = generate_response_stream(prompt)
-                    st.write_stream(stream)
-                    render_toast("Recommendation completed.", "🚍")
-                except AIError as e:
-                    st.error(f"🚨 Error: {e}")
-                except Exception as e:
-                    st.error("🚨 Error: An unexpected error occurred.")
+                if st.session_state.get('is_processing', False):
+                    st.warning("⏳ Please wait for the current request to complete.")
+                else:
+                    st.session_state.is_processing = True
+                    try:
+                        st.markdown("#### Recommendations")
+                        prompt = f"Provide a travel recommendation from {user_loc} to the World Cup Stadium. Suggest the fastest route, the most eco-friendly route, and expected travel time."
+                        
+                        with st.spinner("Generating response..."):
+                            # Streaming the AI response natively
+                            stream = generate_response_stream(prompt)
+                            st.write_stream(stream)
+                        render_toast("Recommendation completed.", "🚍")
+                    except AIError as e:
+                        st.error(f"🚨 Error: {e}")
+                    except Exception as e:
+                        st.error("🚨 Error: An unexpected error occurred.")
+                    finally:
+                        st.session_state.is_processing = False
             else:
                 st.warning("Please enter your location.")
         st.markdown("</div>", unsafe_allow_html=True)

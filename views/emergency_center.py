@@ -31,18 +31,25 @@ def display_emergency():
         incident_type = st.selectbox("Incident Type:", ["Medical Emergency", "Fire", "Lost Child", "Security Threat", "Crowd Panic"])
         location = st.text_input("Location:", placeholder="e.g., Gate 4, Section 102")
         
-        if st.button("Generate Action Checklist", type="primary", use_container_width=True):
+        is_processing = st.session_state.get('is_processing', False)
+        if st.button("Generate Action Checklist", type="primary", use_container_width=True, disabled=is_processing):
             if location:
-                with st.spinner("AI is generating Emergency SOP..."):
+                if st.session_state.get('is_processing', False):
+                    st.warning("⏳ Please wait for the current request to complete.")
+                else:
+                    st.session_state.is_processing = True
                     try:
-                        sop = generate_emergency_sop(incident_type, location)
-                        st.error("🚨 EMERGENCY SOP GENERATED 🚨")
-                        st.markdown(sop)
-                        render_toast(f"SOP generated for {incident_type}", "🚨")
+                        with st.spinner("AI is generating Emergency SOP..."):
+                            sop = generate_emergency_sop(incident_type, location)
+                            st.error("🚨 EMERGENCY SOP GENERATED 🚨")
+                            st.markdown(sop)
+                            render_toast(f"SOP generated for {incident_type}", "🚨")
                     except AIError as e:
                         st.error(f"🚨 Error: {e}")
                     except Exception as e:
                         st.error("🚨 Error: An unexpected error occurred.")
+                    finally:
+                        st.session_state.is_processing = False
             else:
                 st.warning("Please provide a location to generate the SOP.")
         st.markdown("</div>", unsafe_allow_html=True)

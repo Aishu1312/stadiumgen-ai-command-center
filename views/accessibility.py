@@ -181,25 +181,33 @@ def display_accessibility():
         if "acc_play_audio" not in st.session_state:
             st.session_state.acc_play_audio = False
             
-        if st.button("Generate Explanation", use_container_width=True):
-            st.session_state.acc_guide_text = ""
-            st.session_state.acc_audio_bytes = None
-            st.session_state.acc_play_audio = False
-            
-            st.markdown("##### Guide Script")
-            prompt = f"Provide a clear, easy-to-understand, step-by-step guide on: {guidance_topic}. Use simple language suitable for cognitive accessibility. Keep it under 150 words."
-            
-            try:
-                stream = generate_response_stream(prompt)
-                full_response = st.write_stream(stream)
-                st.session_state.acc_guide_text = full_response
-                st.rerun()
-            except AIError as e:
-                logger.error(f"Error generating accessibility guide: {e}")
-                st.error(f"🚨 Error: {e}")
-            except Exception as e:
-                logger.error(f"Error generating accessibility guide: {e}")
-                st.error("🚨 Error: An unexpected error occurred.")
+        is_processing = st.session_state.get('is_processing', False)
+        if st.button("Generate Explanation", use_container_width=True, disabled=is_processing):
+            if st.session_state.get('is_processing', False):
+                st.warning("⏳ Please wait for the current request to complete.")
+            else:
+                st.session_state.is_processing = True
+                try:
+                    st.session_state.acc_guide_text = ""
+                    st.session_state.acc_audio_bytes = None
+                    st.session_state.acc_play_audio = False
+                    
+                    st.markdown("##### Guide Script")
+                    prompt = f"Provide a clear, easy-to-understand, step-by-step guide on: {guidance_topic}. Use simple language suitable for cognitive accessibility. Keep it under 150 words."
+                    
+                    with st.spinner("Generating accessibility guide..."):
+                        stream = generate_response_stream(prompt)
+                        full_response = st.write_stream(stream)
+                        st.session_state.acc_guide_text = full_response
+                    st.rerun()
+                except AIError as e:
+                    logger.error(f"Error generating accessibility guide: {e}")
+                    st.error(f"🚨 Error: {e}")
+                except Exception as e:
+                    logger.error(f"Error generating accessibility guide: {e}")
+                    st.error("🚨 Error: An unexpected error occurred.")
+                finally:
+                    st.session_state.is_processing = False
                 
         if st.session_state.acc_guide_text:
             st.markdown("##### Guide Script")

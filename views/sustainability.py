@@ -29,37 +29,44 @@ def display_sustainability():
             <h3 style='margin-bottom: 0;'>📝 AI Sustainability Report Generator</h3>
         </div>
     """, unsafe_allow_html=True)
-    if st.button("Generate Today's Green Report", use_container_width=True):
-        st.markdown("#### Generated Report")
-        prompt = f"""
-        Write a highly detailed, professional, and comprehensive sustainability report for the stadium operations based on these metrics: {metrics}.
-        
-        The report must include exactly the following sections with proper markdown headings and bullet points:
-        # Sustainability Report
-        ## Executive Summary
-        ## Energy Savings
-        ## Carbon Emission Reduction
-        ## Water Conservation
-        ## Waste Management
-        ## Renewable Energy Usage
-        ## Attendance Insights
-        ## Operational Highlights
-        ## AI Recommendations
-        ## Future Sustainability Goals
-        ## Overall Performance Rating
-        ## Closing Summary
-        
-        Ensure the report reads naturally from start to finish with no incomplete sentences or truncation. Every sentence must end correctly with proper punctuation. Never allow unfinished text or abrupt endings.
-        """
-        
-        with st.spinner("Generating comprehensive report..."):
+    is_processing = st.session_state.get('is_processing', False)
+    if st.button("Generate Today's Green Report", use_container_width=True, disabled=is_processing):
+        if st.session_state.get('is_processing', False):
+            st.warning("⏳ Please wait for the current request to complete.")
+        else:
+            st.session_state.is_processing = True
             try:
-                response = generate_response(prompt)
-                st.markdown(response)
-                render_toast("Green Report Generated", "🌱")
+                st.markdown("#### Generated Report")
+                prompt = f"""
+                Write a highly detailed, professional, and comprehensive sustainability report for the stadium operations based on these metrics: {metrics}.
+                
+                The report must include exactly the following sections with proper markdown headings and bullet points:
+                # Sustainability Report
+                ## Executive Summary
+                ## Energy Savings
+                ## Carbon Emission Reduction
+                ## Water Conservation
+                ## Waste Management
+                ## Renewable Energy Usage
+                ## Attendance Insights
+                ## Operational Highlights
+                ## AI Recommendations
+                ## Future Sustainability Goals
+                ## Overall Performance Rating
+                ## Closing Summary
+                
+                Ensure the report reads naturally from start to finish with no incomplete sentences or truncation. Every sentence must end correctly with proper punctuation. Never allow unfinished text or abrupt endings.
+                """
+                
+                with st.spinner("Generating comprehensive report..."):
+                    response = generate_response(prompt)
+                    st.markdown(response)
+                    render_toast("Green Report Generated", "🌱")
             except AIError as e:
                 st.error(f"🚨 Error: {e}")
             except Exception as e:
                 st.error("🚨 Error: An unexpected error occurred.")
+            finally:
+                st.session_state.is_processing = False
 
 display_sustainability()

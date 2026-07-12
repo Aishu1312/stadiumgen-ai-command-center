@@ -43,16 +43,24 @@ def display_organizer():
         st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
         st.markdown("### 🤖 Ask AI for Insights")
         question = st.text_input("Ask a question about the stadium data:", placeholder="e.g., How can we reduce queue times at Gate 2?")
-        if st.button("Get AI Insight", use_container_width=True):
+        is_processing = st.session_state.get('is_processing', False)
+        if st.button("Get AI Insight", use_container_width=True, disabled=is_processing):
             if question:
-                st.markdown("#### Insight")
-                try:
-                    stream = generate_response_stream(question, system_instruction=Prompts.SYSTEM_ORGANIZER_INSIGHTS)
-                    st.write_stream(stream)
-                except AIError as e:
-                    st.error(f"🚨 Error: {e}")
-                except Exception as e:
-                    st.error("🚨 Error: An unexpected error occurred.")
+                if st.session_state.get('is_processing', False):
+                    st.warning("⏳ Please wait for the current request to complete.")
+                else:
+                    st.session_state.is_processing = True
+                    try:
+                        st.markdown("#### Insight")
+                        with st.spinner("Generating insight..."):
+                            stream = generate_response_stream(question, system_instruction=Prompts.SYSTEM_ORGANIZER_INSIGHTS)
+                            st.write_stream(stream)
+                    except AIError as e:
+                        st.error(f"🚨 Error: {e}")
+                    except Exception as e:
+                        st.error("🚨 Error: An unexpected error occurred.")
+                    finally:
+                        st.session_state.is_processing = False
             else:
                 st.warning("Please enter a question.")
         st.markdown("</div>", unsafe_allow_html=True)

@@ -19,7 +19,8 @@ def display_chat():
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    if prompt := st.chat_input("Ask me anything about the stadium..."):
+    is_processing = st.session_state.get('is_processing', False)
+    if prompt := st.chat_input("Ask me anything about the stadium...", disabled=is_processing):
         st.session_state.messages.append({"role": "user", "content": prompt})
         
         with st.chat_message("user"):
@@ -28,6 +29,7 @@ def display_chat():
         with st.chat_message("assistant"):
             sys_prompt = "You are a highly intelligent AI Stadium Assistant. Provide concise, helpful, and polite answers."
             
+            st.session_state.is_processing = True
             try:
                 # Stream the response natively
                 response_stream = generate_response_stream(prompt, system_instruction=sys_prompt)
@@ -37,5 +39,8 @@ def display_chat():
                 st.error(f"🚨 Error: {e}")
             except Exception as e:
                 st.error("🚨 Error: An unexpected error occurred.")
+            finally:
+                st.session_state.is_processing = False
+                st.rerun()
 
 display_chat()

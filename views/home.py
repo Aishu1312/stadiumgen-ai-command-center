@@ -28,20 +28,22 @@ def display_home():
     
     action_result = None
     
+    is_processing = st.session_state.get('is_processing', False)
+
     with col_a:
-        if st.button("Generate Report", use_container_width=True):
+        if st.button("Generate Report", use_container_width=True, disabled=is_processing):
             action_result = "Report"
             render_toast("Report generated successfully!", "✅")
     with col_b:
-        if st.button("Broadcast Announcement", use_container_width=True):
+        if st.button("Broadcast Announcement", use_container_width=True, disabled=is_processing):
             action_result = "Broadcast Announcement"
             render_toast("Broadcast channel opened.", "🔊")
     with col_c:
-        if st.button("Lockdown Protocol", use_container_width=True):
+        if st.button("Lockdown Protocol", use_container_width=True, disabled=is_processing):
             action_result = "Lockdown Protocol"
             render_toast("CRITICAL: Lockdown engaged.", "🚨")
     with col_d:
-        if st.button("Dispatch Medics", use_container_width=True):
+        if st.button("Dispatch Medics", use_container_width=True, disabled=is_processing):
             action_result = "Dispatch Medics"
             render_toast("Medics en route.", "🚑")
 
@@ -59,12 +61,19 @@ def display_home():
         elif action_result == "Dispatch Medics":
             prompt = "Generate a brief radio dispatch message to the medical team directing them to Zone A for an immediate medical emergency."
             
-        try:
-            stream = generate_response_stream(prompt)
-            st.write_stream(stream)
-        except AIError as e:
-            st.error(f"🚨 Error: {e}")
-        except Exception as e:
-            st.error("🚨 Error: An unexpected error occurred.")
+        if st.session_state.get('is_processing', False):
+            st.warning("⏳ Please wait for the current request to complete.")
+        else:
+            st.session_state.is_processing = True
+            try:
+                with st.spinner("Generating response..."):
+                    stream = generate_response_stream(prompt)
+                    st.write_stream(stream)
+            except AIError as e:
+                st.error(f"🚨 Error: {e}")
+            except Exception as e:
+                st.error("🚨 Error: An unexpected error occurred.")
+            finally:
+                st.session_state.is_processing = False
 
 display_home()
