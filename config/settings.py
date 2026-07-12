@@ -11,7 +11,7 @@ class Settings:
     
     # AI Settings
     DEFAULT_MODEL: str = "gemini-2.5-flash"
-    MAX_OUTPUT_TOKENS: int = 1024
+    MAX_OUTPUT_TOKENS: int = 8192
     TEMPERATURE: float = 0.7
     
     # UI Theme Settings

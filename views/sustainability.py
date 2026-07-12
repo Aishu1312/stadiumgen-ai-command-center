@@ -27,7 +27,25 @@ def display_sustainability():
     st.markdown("### 📝 AI Sustainability Report Generator")
     if st.button("Generate Today's Green Report", use_container_width=True):
         st.markdown("#### Generated Report")
-        prompt = f"Write a short, encouraging sustainability report for the stadium operations based on these metrics: {metrics}. Suggest 2 actionable ways to improve further."
+        prompt = f"""
+        Write a highly detailed, professional, and comprehensive sustainability report for the stadium operations based on these metrics: {metrics}.
+        
+        The report must include exactly the following sections with proper markdown headings and bullet points:
+        - Executive Summary
+        - Energy Savings
+        - Carbon Emission Reduction
+        - Water Conservation
+        - Waste Management
+        - Renewable Energy Usage
+        - Attendance Insights
+        - Operational Highlights
+        - AI Recommendations
+        - Future Sustainability Goals
+        - Overall Performance Rating
+        - Closing Summary
+        
+        Ensure the report reads naturally from start to finish with no incomplete sentences or truncation.
+        """
         
         stream = generate_response_stream(prompt)
         st.write_stream(stream)

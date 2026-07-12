@@ -130,7 +130,7 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
     full_prompt = f"System: {system_instruction}\n{context}\nUser: {prompt}" if system_instruction else f"{context}{prompt}"
     
     try:
-        response = model.generate_content(full_prompt, stream=True, request_options={"timeout": 30})
+        response = model.generate_content(full_prompt, stream=True, request_options={"timeout": 120})
         for chunk in response:
             if chunk.text:
                 yield chunk.text
@@ -139,7 +139,7 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
         fallback_model = client.get_model(fallback=True)
         if fallback_model:
             try:
-                response = fallback_model.generate_content(full_prompt, stream=True, request_options={"timeout": 30})
+                response = fallback_model.generate_content(full_prompt, stream=True, request_options={"timeout": 120})
                 for chunk in response:
                     if chunk.text:
                         yield chunk.text
