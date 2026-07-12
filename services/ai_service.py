@@ -1,6 +1,7 @@
 import os
 import streamlit as st
 import google.generativeai as genai
+from google.generativeai.types import GenerationConfig
 from google.api_core import exceptions as google_exceptions
 from dotenv import load_dotenv
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, RetryError
@@ -16,12 +17,10 @@ class GeminiClient:
     """Centralized client for Google Gemini API."""
     def __init__(self):
         self.model_name = settings.DEFAULT_MODEL
+        # Use simple dict with only the snake_case keys to avoid SDK crashes
         self.generation_config = {
             "temperature": settings.TEMPERATURE,
-            "max_output_tokens": 4096,
-            "maxOutputTokens": 4096,
-            "max_tokens": 4096,
-            "maxTokens": 4096,
+            "max_output_tokens": 4096
         }
         self.is_configured = False
         self.config_error = None
@@ -81,13 +80,11 @@ def get_genai_model() -> Optional[Any]:
 )
 def _generate_response_inner(prompt: str, system_instruction: str = "", context: str = "") -> str:
     if not client.is_configured:
-        if client.config_error == "API key is missing.":
-            return "🚨 Invalid API key."
-        return f"🚨 SDK Configuration Error: {client.config_error}"
+        return "🚨 Invalid API key. Please check your secrets or environment variables."
 
     model = client.get_model()
     if not model:
-        return "🚨 Unsupported model."
+        return "🚨 Unsupported model. Please check the model name in your configuration."
     
     full_prompt = f"System: {system_instruction}\n{context}\nUser: {prompt}" if system_instruction else f"{context}{prompt}"
     
@@ -96,7 +93,7 @@ def _generate_response_inner(prompt: str, system_instruction: str = "", context:
             full_prompt, 
             request_options={"timeout": 120}
         )
-        return response.text if response.text else "🚨 Invalid response received from the AI service."
+        return response.text if response.text else "🚨 Response parsing failure. Please try a different prompt."
     except google_exceptions.NotFound as e:
         logger.error(f"Model {client.model_name} not found. Fallback: {e}")
         fallback_model = client.get_model(fallback=True)
@@ -106,27 +103,31 @@ def _generate_response_inner(prompt: str, system_instruction: str = "", context:
                     full_prompt, 
                     request_options={"timeout": 120}
                 )
-                return response.text if response.text else "🚨 Invalid response received from the AI service."
+                return response.text if response.text else "🚨 Response parsing failure. Please try again."
             except Exception as inner_e:
                 logger.error(f"Fallback model failed: {inner_e}")
-                return "🚨 Unsupported model."
-        return "🚨 Unsupported model."
+                return "🚨 Unsupported model. Both default and fallback models failed."
+        return "🚨 Unsupported model. The requested model is not available."
     except (google_exceptions.ResourceExhausted, google_exceptions.ServiceUnavailable, google_exceptions.DeadlineExceeded) as e:
         raise e  # Let tenacity retry
     except google_exceptions.PermissionDenied:
-        return "🚨 Authentication failed: Invalid API key."
+        return "🚨 Authentication failed. Please ensure your API key has the correct permissions."
     except google_exceptions.InvalidArgument as e:
-        return f"🚨 Invalid response received from the AI service. Details: {e}"
+        if "API key" in str(e):
+            return "🚨 Invalid API key. Please provide a valid Gemini API key."
+        return f"🚨 Invalid request payload. Please verify your prompt format."
     except Exception as e:
-        error_msg = str(e)
-        if "FinishReason.SAFETY" in error_msg:
-            return "🚨 Content Blocked: The AI refused to generate this response due to safety settings."
-        return f"🚨 Service temporarily unavailable. Details: {error_msg}"
+        error_msg = str(e).lower()
+        if "timeout" in error_msg:
+            return "🚨 Network timeout. Please check your internet connection."
+        if "safety" in error_msg:
+            return "🚨 Content Blocked. The AI refused to generate this response due to safety settings."
+        return "🚨 Service temporarily unavailable. Please try again later."
 
 def generate_response(prompt: str, system_instruction: str = "") -> str:
     """Generates a text response from Gemini given a prompt with retry logic."""
     if not prompt or not str(prompt).strip():
-        return "🚨 Error: Empty prompt provided."
+        return "🚨 Invalid request payload. Empty prompt provided."
 
     context = ""
     if "current_page_context" in st.session_state:
@@ -134,10 +135,21 @@ def generate_response(prompt: str, system_instruction: str = "") -> str:
 
     try:
         return _generate_response_inner(prompt, system_instruction, context)
-    except RetryError:
-        return "🚨 Rate limit reached. Please try again later."
+    except RetryError as e:
+        # Determine if it was quota or timeout based on the last exception
+        last_exc = e.last_attempt.exception() if e.last_attempt else None
+        if isinstance(last_exc, google_exceptions.ResourceExhausted):
+            if "quota" in str(last_exc).lower():
+                return "🚨 API quota exceeded. Please upgrade your plan or wait for the reset."
+            return "🚨 Rate limit reached. Please slow down your requests and try again."
+        elif isinstance(last_exc, google_exceptions.DeadlineExceeded):
+            return "🚨 Network timeout. The connection timed out during retries."
+        return "🚨 Service temporarily unavailable. Repeated requests failed."
     except Exception as e:
-        return f"🚨 Network timeout. Error: {str(e)}"
+        error_msg = str(e).lower()
+        if "timeout" in error_msg:
+            return "🚨 Network timeout. Please check your internet connection."
+        return "🚨 Service temporarily unavailable. An unexpected error occurred."
 
 @retry(
     stop=stop_after_attempt(3), 
@@ -146,15 +158,12 @@ def generate_response(prompt: str, system_instruction: str = "") -> str:
 )
 def _generate_response_stream_inner(prompt: str, system_instruction: str = "", context: str = "") -> Generator[str, None, None]:
     if not client.is_configured:
-        if client.config_error == "API key is missing.":
-            yield "\n\n🚨 Invalid API key."
-            return
-        yield f"\n\n🚨 SDK Configuration Error: {client.config_error}"
+        yield "\n\n🚨 Invalid API key. Please check your configuration."
         return
 
     model = client.get_model()
     if not model:
-        yield "\n\n🚨 Unsupported model."
+        yield "\n\n🚨 Unsupported model. Please check the model name in settings."
         return
         
     full_prompt = f"System: {system_instruction}\n{context}\nUser: {prompt}" if system_instruction else f"{context}{prompt}"
@@ -172,7 +181,7 @@ def _generate_response_stream_inner(prompt: str, system_instruction: str = "", c
             except ValueError:
                 pass
     except google_exceptions.NotFound as e:
-        logger.error(f"Model {client.model_name} not found in stream. Attempting fallback to gemini-2.5-flash-lite: {e}")
+        logger.error(f"Model {client.model_name} not found in stream. Fallback: {e}")
         fallback_model = client.get_model(fallback=True)
         if fallback_model:
             try:
@@ -189,26 +198,31 @@ def _generate_response_stream_inner(prompt: str, system_instruction: str = "", c
                         pass
             except Exception as inner_e:
                 logger.error(f"Fallback model stream failed: {inner_e}")
-                yield "\n\n🚨 Unsupported model."
+                yield "\n\n🚨 Unsupported model. Both default and fallback models failed."
         else:
-            yield "\n\n🚨 Unsupported model."
+            yield "\n\n🚨 Unsupported model. The requested model is not available."
     except (google_exceptions.ResourceExhausted, google_exceptions.ServiceUnavailable, google_exceptions.DeadlineExceeded) as e:
         raise e  # Let tenacity retry
     except google_exceptions.PermissionDenied:
-        yield "\n\n🚨 Authentication failed: Invalid API key."
+        yield "\n\n🚨 Authentication failed. Please ensure your API key has the correct permissions."
     except google_exceptions.InvalidArgument as e:
-        yield f"\n\n🚨 Invalid response received from the AI service. Details: {e}"
-    except Exception as e:
-        error_msg = str(e)
-        if "FinishReason.SAFETY" in error_msg:
-            yield "\n\n🚨 Content Blocked: The AI refused to generate this response due to safety settings."
+        if "API key" in str(e):
+            yield "\n\n🚨 Invalid API key. Please provide a valid Gemini API key."
         else:
-            yield f"\n\n🚨 Service temporarily unavailable. Details: {error_msg}"
+            yield f"\n\n🚨 Invalid request payload. Please verify your prompt format."
+    except Exception as e:
+        error_msg = str(e).lower()
+        if "timeout" in error_msg:
+            yield "\n\n🚨 Network timeout. Please check your connection."
+        elif "safety" in error_msg:
+            yield "\n\n🚨 Content Blocked. The AI refused to generate this response due to safety settings."
+        else:
+            yield "\n\n🚨 Service temporarily unavailable. Please try again later."
 
 def generate_response_stream(prompt: str, system_instruction: str = "") -> Generator[str, None, None]:
     """Generates a streaming response for interactive chat UIs."""
     if not prompt or not str(prompt).strip():
-        yield "🚨 Error: Empty prompt provided."
+        yield "🚨 Invalid request payload. Empty prompt provided."
         return
 
     context = ""
@@ -217,10 +231,23 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
 
     try:
         yield from _generate_response_stream_inner(prompt, system_instruction, context)
-    except RetryError:
-        yield "\n\n🚨 Rate limit reached. Please try again later."
+    except RetryError as e:
+        last_exc = e.last_attempt.exception() if e.last_attempt else None
+        if isinstance(last_exc, google_exceptions.ResourceExhausted):
+            if "quota" in str(last_exc).lower():
+                yield "\n\n🚨 API quota exceeded. Please upgrade your plan or wait for the reset."
+            else:
+                yield "\n\n🚨 Rate limit reached. Please slow down your requests and try again."
+        elif isinstance(last_exc, google_exceptions.DeadlineExceeded):
+            yield "\n\n🚨 Network timeout. The connection timed out during retries."
+        else:
+            yield "\n\n🚨 Service temporarily unavailable. Repeated requests failed."
     except Exception as e:
-        yield f"\n\n🚨 Network timeout. Error: {str(e)}"
+        error_msg = str(e).lower()
+        if "timeout" in error_msg:
+            yield "\n\n🚨 Network timeout. Please check your internet connection."
+        else:
+            yield "\n\n🚨 Service temporarily unavailable. An unexpected error occurred."
 
 def translate_text(text: str, target_language: str) -> str:
     """Translates text using Gemini."""
