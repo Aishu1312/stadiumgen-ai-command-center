@@ -8,6 +8,8 @@ class Settings:
     # UI Configuration
     THEME_COLOR: str = "#4CAF50"
     COMPANY_NAME: str = "StadiumGen AI"
+    APP_NAME: str = "StadiumGen AI"
+    APP_VERSION: str = "1.0.0"
     DEFAULT_LANGUAGE: str = "English"
     
     # AI Configuration
