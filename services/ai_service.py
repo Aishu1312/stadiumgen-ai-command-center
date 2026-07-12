@@ -50,7 +50,7 @@ class GeminiClient:
     def get_model(self, fallback: bool = False) -> Optional[Any]:
         if not self.is_configured:
             return None
-        model_to_use = "gemini-1.5-flash-8b" if fallback else self.model_name
+        model_to_use = "gemini-2.5-flash-lite" if fallback else self.model_name
         try:
             return genai.GenerativeModel(
                 model_name=model_to_use,
@@ -91,7 +91,7 @@ def generate_response(prompt: str, system_instruction: str = "") -> str:
         response = model.generate_content(full_prompt, request_options={"timeout": 30})
         return response.text if response.text else "🚨 Error: Empty response from AI."
     except google_exceptions.NotFound as e:
-        logger.error(f"Model {client.model_name} not found. Attempting fallback to gemini-1.5-flash: {e}")
+        logger.error(f"Model {client.model_name} not found. Attempting fallback to gemini-2.5-flash-lite: {e}")
         fallback_model = client.get_model(fallback=True)
         if fallback_model:
             try:
@@ -135,7 +135,7 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
             if chunk.text:
                 yield chunk.text
     except google_exceptions.NotFound as e:
-        logger.error(f"Model {client.model_name} not found in stream. Attempting fallback to gemini-1.5-flash: {e}")
+        logger.error(f"Model {client.model_name} not found in stream. Attempting fallback to gemini-2.5-flash-lite: {e}")
         fallback_model = client.get_model(fallback=True)
         if fallback_model:
             try:
