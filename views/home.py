@@ -28,9 +28,9 @@ def display_home():
     action_result = None
     
     with col_a:
-        if st.button("Generate Evening Report", use_container_width=True):
-            action_result = "Evening Report"
-            render_toast("Evening Report generated successfully!", "✅")
+        if st.button("Generate Report", use_container_width=True):
+            action_result = "Report"
+            render_toast("Report generated successfully!", "✅")
     with col_b:
         if st.button("Broadcast Announcement", use_container_width=True):
             action_result = "Broadcast Announcement"
@@ -49,7 +49,7 @@ def display_home():
         st.markdown(f"### 🤖 AI Agent: {action_result}")
         
         prompt = ""
-        if action_result == "Evening Report":
+        if action_result == "Report":
             prompt = "Generate a short evening operations report for the stadium. Include total visitors, any resolved incidents, and sustainability performance."
         elif action_result == "Broadcast Announcement":
             prompt = "Generate a polite, welcoming broadcast announcement for the stadium crowd thanking them for attending and wishing them a safe journey home."
