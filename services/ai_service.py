@@ -132,8 +132,12 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
     try:
         response = model.generate_content(full_prompt, stream=True, request_options={"timeout": 120})
         for chunk in response:
-            if chunk.text:
-                yield chunk.text
+            try:
+                if chunk.text:
+                    yield chunk.text
+            except ValueError:
+                # Ignore chunks without text parts (e.g. STOP finish_reason)
+                pass
     except google_exceptions.NotFound as e:
         logger.error(f"Model {client.model_name} not found in stream. Attempting fallback to gemini-2.5-flash-lite: {e}")
         fallback_model = client.get_model(fallback=True)
@@ -141,8 +145,11 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
             try:
                 response = fallback_model.generate_content(full_prompt, stream=True, request_options={"timeout": 120})
                 for chunk in response:
-                    if chunk.text:
-                        yield chunk.text
+                    try:
+                        if chunk.text:
+                            yield chunk.text
+                    except ValueError:
+                        pass
             except Exception as inner_e:
                 logger.error(f"Fallback model stream failed: {inner_e}")
                 yield f"\n\n[🚨 Error]: Fallback model also failed: {inner_e}"

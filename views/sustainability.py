@@ -1,7 +1,7 @@
 import streamlit as st
 from components.ui import render_header, render_metric, show_loading_skeleton, render_toast
 from services.data_service import generate_sustainability_metrics
-from services.ai_service import generate_response_stream
+from services.ai_service import generate_response
 
 st.session_state.current_page_context = "User is on the Sustainability page, checking eco-metrics."
 
@@ -34,24 +34,23 @@ def display_sustainability():
         Write a highly detailed, professional, and comprehensive sustainability report for the stadium operations based on these metrics: {metrics}.
         
         The report must include exactly the following sections with proper markdown headings and bullet points:
-        - Executive Summary
-        - Energy Savings
-        - Carbon Emission Reduction
-        - Water Conservation
-        - Waste Management
-        - Renewable Energy Usage
-        - Attendance Insights
-        - Operational Highlights
-        - AI Recommendations
-        - Future Sustainability Goals
-        - Overall Performance Rating
-        - Closing Summary
+        # Sustainability Report
+        ## Executive Summary
+        ## Energy Efficiency
+        ## Carbon Footprint
+        ## Water Conservation
+        ## Waste Management
+        ## AI Insights
+        ## Recommendations
+        ## Future Outlook
+        ## Conclusion
         
-        Ensure the report reads naturally from start to finish with no incomplete sentences or truncation.
+        Ensure the report reads naturally from start to finish with no incomplete sentences or truncation. Every sentence must end correctly with proper punctuation. Never allow unfinished text or abrupt endings.
         """
         
-        stream = generate_response_stream(prompt)
-        st.write_stream(stream)
+        with st.spinner("Generating comprehensive report..."):
+            response = generate_response(prompt)
+            st.markdown(response)
         render_toast("Green Report Generated", "🌱")
 
 display_sustainability()
