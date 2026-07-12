@@ -73,7 +73,7 @@ class GeminiClient:
         try:
             self.client = genai.Client(
                 api_key=api_key,
-                http_options={'timeout': settings.AI_TIMEOUT * 1000} # Optional depending on SDK version, we'll configure per-request if needed
+                http_options={'timeout': 30}
             )
             
             # Validate configured model without failing on network/quota errors
@@ -112,7 +112,7 @@ def map_google_error(exc: Exception) -> str:
         elif code in (401, 403):
             return "Invalid API credentials"
         elif code == 429:
-            return "Temporarily rate limited. Please wait a moment and try again."
+            return "The AI service is temporarily busy due to high demand. Please wait a moment and try again."
         elif code == 400:
             return "Configuration error"
         else:
@@ -127,6 +127,7 @@ def map_google_error(exc: Exception) -> str:
     logger.error(f"Unhandled AI exception: {str(exc)}", exc_info=True)
     return "Service temporarily unavailable"
 
+@st.cache_data(ttl=settings.CACHE_TTL, show_spinner=False)
 @retry(
     stop=stop_after_attempt(settings.AI_RETRY_COUNT), 
     wait=wait_genai_rate_limit(wait_exponential(multiplier=1, min=2, max=10)),
