@@ -114,8 +114,20 @@ def generate_response(prompt: str, system_instruction: str = "") -> str:
         logger.warning(f"Retryable error in generate_response: {e}")
         raise e  # Let tenacity catch and retry
     except Exception as e:
-        logger.error(f"Error in generate_response: {e}")
-        return f"🚨 Error communicating with AI: Please check your API limits or network connection."
+        error_msg = str(e)
+        logger.error(f"Error in generate_response: {error_msg}")
+        
+        # Clean up common error strings to be user-friendly but detailed
+        if "API key not valid" in error_msg:
+            return f"🚨 Authentication Error: Invalid or expired Gemini API key."
+        elif "quota" in error_msg.lower() or "429" in error_msg:
+            return f"🚨 Rate Limit Exceeded: The AI service quota has been exhausted. Please wait or upgrade your plan."
+        elif "generation_config" in error_msg or "keyword argument" in error_msg:
+            return f"🚨 SDK Configuration Error: {error_msg}"
+        elif "FinishReason.SAFETY" in error_msg:
+            return f"🚨 Content Blocked: The AI refused to generate this response due to safety settings."
+        
+        return f"🚨 Unexpected AI Service Error: {type(e).__name__} - {error_msg}"
 
 @retry(
     stop=stop_after_attempt(3), 
@@ -176,8 +188,19 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
         else:
             yield f"\n\n[🚨 Error]: Configured model not found and fallback unavailable."
     except Exception as e:
-        logger.error(f"Error in generate_response_stream: {e}")
-        yield f"\n\n[🚨 Error]: Please check your API limits or network connection."
+        error_msg = str(e)
+        logger.error(f"Error in generate_response_stream: {error_msg}")
+        
+        if "API key not valid" in error_msg:
+            yield f"\n\n🚨 Authentication Error: Invalid or expired Gemini API key."
+        elif "quota" in error_msg.lower() or "429" in error_msg:
+            yield f"\n\n🚨 Rate Limit Exceeded: The AI service quota has been exhausted. Please wait or upgrade your plan."
+        elif "generation_config" in error_msg or "keyword argument" in error_msg:
+            yield f"\n\n🚨 SDK Configuration Error: {error_msg}"
+        elif "FinishReason.SAFETY" in error_msg:
+            yield f"\n\n🚨 Content Blocked: The AI refused to generate this response due to safety settings."
+        else:
+            yield f"\n\n🚨 Unexpected AI Service Error: {type(e).__name__} - {error_msg}"
 
 def translate_text(text: str, target_language: str) -> str:
     """Translates text using Gemini."""
