@@ -23,8 +23,11 @@ def display_sustainability():
 
     st.markdown("<hr class='styled-hr'>", unsafe_allow_html=True)
     
-    st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
-    st.markdown("### 📝 AI Sustainability Report Generator")
+    st.markdown("""
+        <div class='glass-card' style='margin-bottom: 15px; padding-bottom: 10px;'>
+            <h3 style='margin-bottom: 0;'>📝 AI Sustainability Report Generator</h3>
+        </div>
+    """, unsafe_allow_html=True)
     if st.button("Generate Today's Green Report", use_container_width=True):
         st.markdown("#### Generated Report")
         prompt = f"""
@@ -50,6 +53,5 @@ def display_sustainability():
         stream = generate_response_stream(prompt)
         st.write_stream(stream)
         render_toast("Green Report Generated", "🌱")
-    st.markdown("</div>", unsafe_allow_html=True)
 
 display_sustainability()
