@@ -1,3 +1,5 @@
+import os
+import streamlit as st
 from typing import Dict, Any
 
 class Settings:
@@ -22,5 +24,24 @@ class Settings:
     
     # Cache Configuration
     CACHE_TTL: int = 300  # 5 minutes
+
+    @property
+    def GEMINI_API_KEY(self) -> str | None:
+        """Securely retrieves the Gemini API Key from Streamlit secrets or environment."""
+        api_key = None
+        try:
+            if "GEMINI_API_KEY" in st.secrets:
+                api_key = st.secrets["GEMINI_API_KEY"]
+        except Exception:
+            pass
+
+        if not api_key:
+            env_key = os.environ.get("GEMINI_API_KEY")
+            if env_key and env_key.strip() and env_key != "your_gemini_api_key_here":
+                api_key = env_key
+
+        if api_key and api_key.strip() and api_key != "your_gemini_api_key_here":
+            return api_key
+        return None
 
 settings = Settings()

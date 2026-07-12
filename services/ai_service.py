@@ -44,19 +44,9 @@ class GeminiClient:
 
     def configure(self) -> None:
         """Initializes the Gemini model safely."""
-        api_key = None
-        
-        try:
-            if "GEMINI_API_KEY" in st.secrets:
-                api_key = st.secrets["GEMINI_API_KEY"]
-        except Exception:
-            pass
-            
-        env_key = os.environ.get("GEMINI_API_KEY")
-        if env_key and env_key.strip() and env_key != "your_gemini_api_key_here":
-            api_key = env_key
+        api_key = settings.GEMINI_API_KEY
 
-        if not api_key or api_key.strip() == "" or api_key == "your_gemini_api_key_here":
+        if not api_key:
             self.config_error = "Missing configuration"
             self.is_configured = False
             return
