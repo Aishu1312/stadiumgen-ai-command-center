@@ -59,14 +59,9 @@ class GeminiClient:
         if env_key and env_key.strip() and env_key != "your_gemini_api_key_here":
             api_key = env_key
 
-        # 3. Fallback
+        # 3. Fallback check
         if not api_key or api_key.strip() == "" or api_key == "your_gemini_api_key_here":
-            part1 = "AQ.Ab8RN6Ki_DiQsUjU"
-            part2 = "mGRWl9-V1IEiahLgRORsjWm7CqFwldG7GA"
-            api_key = part1 + part2
-
-        if not api_key:
-            self.config_error = "API key missing"
+            self.config_error = "Missing configuration"
             self.is_configured = False
             return
 
@@ -101,27 +96,28 @@ def get_genai_model() -> Optional[Any]:
 def map_google_error(exc: Exception) -> str:
     """Maps raw Google exceptions to exact user-friendly required strings."""
     if isinstance(exc, google_exceptions.NotFound):
-        return "The configured AI model is unavailable. Please update the model configuration."
+        return "Model unavailable"
     elif isinstance(exc, google_exceptions.PermissionDenied):
-        return "The AI service is not configured correctly. Please verify the API credentials."
+        return "Authentication failed"
     elif isinstance(exc, google_exceptions.ResourceExhausted):
         if "quota" in str(exc).lower():
-            return "The AI usage limit has been reached. Please try again later."
-        return "Too many requests. Waiting before retrying."
+            return "Quota exceeded"
+        return "Temporary service issue"
     elif isinstance(exc, google_exceptions.DeadlineExceeded):
-        return "The request took longer than expected. Retrying automatically..."
+        return "Network timeout"
+    elif isinstance(exc, google_exceptions.ServiceUnavailable):
+        return "Temporary service issue"
     elif isinstance(exc, google_exceptions.InvalidArgument):
-        if "API key" in str(exc):
-            return "The AI service is not configured correctly. Please verify the API credentials."
-        return "An unexpected error occurred with the AI service. Invalid request format."
+        if "API key" in str(exc) or "key" in str(exc).lower():
+            return "Authentication failed"
+        return "Temporary service issue"
     elif isinstance(exc, ValueError):
-        if "SAFETY" in str(exc):
-            return "An unexpected error occurred with the AI service. Content was blocked due to safety settings."
+        return "Temporary service issue"
     elif "timeout" in str(exc).lower():
-        return "The request took longer than expected. Retrying automatically..."
+        return "Network timeout"
     
     logger.error(f"Unhandled AI exception: {str(exc)}", exc_info=True)
-    return "An unexpected error occurred with the AI service. Please try again later."
+    return "Temporary service issue"
 
 @retry(
     stop=stop_after_attempt(settings.AI_RETRY_COUNT), 
@@ -131,11 +127,11 @@ def map_google_error(exc: Exception) -> str:
 )
 def _generate_response_inner(prompt: str, system_instruction: str = "", context: str = "") -> str:
     if not client.is_configured:
-        return "🚨 The AI service is not configured correctly. Please verify the API credentials."
+        return "Missing configuration"
 
     model = client.get_model()
     if not model:
-        return "🚨 The configured AI model is unavailable. Please update the model configuration."
+        return "Model unavailable"
     
     full_prompt = f"System: {system_instruction}\n{context}\nUser: {prompt}" if system_instruction else f"{context}{prompt}"
     
@@ -145,7 +141,7 @@ def _generate_response_inner(prompt: str, system_instruction: str = "", context:
             request_options={"timeout": settings.AI_TIMEOUT}
         )
         if not response.text:
-            return "🚨 The AI service returned an empty response. Please try again."
+            return "Empty response"
         return response.text
     except google_exceptions.NotFound as e:
         logger.error(f"Model {client.model_name} not found. Fallback: {e}")
@@ -157,21 +153,21 @@ def _generate_response_inner(prompt: str, system_instruction: str = "", context:
                     request_options={"timeout": settings.AI_TIMEOUT}
                 )
                 if not response.text:
-                    return "🚨 The AI service returned an empty response. Please try again."
+                    return "Empty response"
                 return response.text
             except Exception as inner_e:
                 logger.error(f"Fallback model failed: {inner_e}")
-                return "🚨 The configured AI model is unavailable. Please update the model configuration."
-        return "🚨 The configured AI model is unavailable. Please update the model configuration."
+                return "Model unavailable"
+        return "Model unavailable"
     except (google_exceptions.ResourceExhausted, google_exceptions.ServiceUnavailable, google_exceptions.DeadlineExceeded) as e:
         raise e  # Allow tenacity to handle the retry
     except Exception as e:
-        return f"🚨 {map_google_error(e)}"
+        return map_google_error(e)
 
 def generate_response(prompt: str, system_instruction: str = "") -> str:
     """Wrapper to handle RetryError gracefully."""
     if not prompt or not str(prompt).strip():
-        return "🚨 The AI service returned an empty response. Please try again."
+        return "Empty response"
 
     context = ""
     if "current_page_context" in st.session_state:
@@ -181,9 +177,9 @@ def generate_response(prompt: str, system_instruction: str = "") -> str:
         return _generate_response_inner(prompt, system_instruction, context)
     except RetryError as e:
         last_exc = e.last_attempt.exception() if e.last_attempt else None
-        return f"🚨 {map_google_error(last_exc)}"
+        return map_google_error(last_exc)
     except Exception as e:
-        return f"🚨 {map_google_error(e)}"
+        return map_google_error(e)
 
 @retry(
     stop=stop_after_attempt(settings.AI_RETRY_COUNT), 
@@ -193,12 +189,12 @@ def generate_response(prompt: str, system_instruction: str = "") -> str:
 )
 def _generate_response_stream_inner(prompt: str, system_instruction: str = "", context: str = "") -> Generator[str, None, None]:
     if not client.is_configured:
-        yield f"\n\n🚨 The AI service is not configured correctly. Please verify the API credentials."
+        yield "Missing configuration"
         return
 
     model = client.get_model()
     if not model:
-        yield "\n\n🚨 The configured AI model is unavailable. Please update the model configuration."
+        yield "Model unavailable"
         return
         
     full_prompt = f"System: {system_instruction}\n{context}\nUser: {prompt}" if system_instruction else f"{context}{prompt}"
@@ -219,7 +215,7 @@ def _generate_response_stream_inner(prompt: str, system_instruction: str = "", c
                 pass
         
         if not has_yielded:
-            yield "\n\n🚨 The AI service returned an empty response. Please try again."
+            yield "Empty response"
             
     except google_exceptions.NotFound as e:
         logger.error(f"Model {client.model_name} not found in stream. Fallback: {e}")
@@ -240,21 +236,21 @@ def _generate_response_stream_inner(prompt: str, system_instruction: str = "", c
                     except ValueError:
                         pass
                 if not has_yielded:
-                    yield "\n\n🚨 The AI service returned an empty response. Please try again."
+                    yield "Empty response"
             except Exception as inner_e:
                 logger.error(f"Fallback model stream failed: {inner_e}")
-                yield "\n\n🚨 The configured AI model is unavailable. Please update the model configuration."
+                yield "Model unavailable"
         else:
-            yield "\n\n🚨 The configured AI model is unavailable. Please update the model configuration."
+            yield "Model unavailable"
     except (google_exceptions.ResourceExhausted, google_exceptions.ServiceUnavailable, google_exceptions.DeadlineExceeded) as e:
         raise e  # Allow tenacity to retry
     except Exception as e:
-        yield f"\n\n🚨 {map_google_error(e)}"
+        yield map_google_error(e)
 
 def generate_response_stream(prompt: str, system_instruction: str = "") -> Generator[str, None, None]:
     """Generates a streaming response for interactive chat UIs."""
     if not prompt or not str(prompt).strip():
-        yield "🚨 The AI service returned an empty response. Please try again."
+        yield "Empty response"
         return
 
     context = ""
@@ -265,9 +261,9 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
         yield from _generate_response_stream_inner(prompt, system_instruction, context)
     except RetryError as e:
         last_exc = e.last_attempt.exception() if e.last_attempt else None
-        yield f"\n\n🚨 {map_google_error(last_exc)}"
+        yield map_google_error(last_exc)
     except Exception as e:
-        yield f"\n\n🚨 {map_google_error(e)}"
+        yield map_google_error(e)
 
 def translate_text(text: str, target_language: str) -> str:
     """Translates text using Gemini."""
