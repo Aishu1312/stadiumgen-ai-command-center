@@ -90,7 +90,6 @@ def generate_response(prompt: str, system_instruction: str = "") -> str:
     try:
         response = model.generate_content(
             full_prompt, 
-            generation_config=client.generation_config,
             request_options={"timeout": 120}
         )
         return response.text if response.text else "🚨 Error: Empty response from AI."
@@ -101,7 +100,6 @@ def generate_response(prompt: str, system_instruction: str = "") -> str:
             try:
                 response = fallback_model.generate_content(
                     full_prompt, 
-                    generation_config=client.generation_config,
                     request_options={"timeout": 120}
                 )
                 return response.text if response.text else "🚨 Error: Empty response from AI."
@@ -144,7 +142,6 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
         response = model.generate_content(
             full_prompt, 
             stream=True, 
-            generation_config=client.generation_config,
             request_options={"timeout": 120}
         )
         for chunk in response:
@@ -162,7 +159,6 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
                 response = fallback_model.generate_content(
                     full_prompt, 
                     stream=True, 
-                    generation_config=client.generation_config,
                     request_options={"timeout": 120}
                 )
                 for chunk in response:
