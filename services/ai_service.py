@@ -50,7 +50,7 @@ class GeminiClient:
     def get_model(self, fallback: bool = False) -> Optional[Any]:
         if not self.is_configured:
             return None
-        model_to_use = "gemini-1.5-flash" if fallback else self.model_name
+        model_to_use = "gemini-pro" if fallback else self.model_name
         try:
             return genai.GenerativeModel(
                 model_name=model_to_use,
@@ -145,7 +145,7 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
                         yield chunk.text
             except Exception as inner_e:
                 logger.error(f"Fallback model stream failed: {inner_e}")
-                yield f"\n\n[🚨 Error]: Fallback model also failed."
+                yield f"\n\n[🚨 Error]: Fallback model also failed: {inner_e}"
         else:
             yield f"\n\n[🚨 Error]: Configured model not found and fallback unavailable."
     except Exception as e:
