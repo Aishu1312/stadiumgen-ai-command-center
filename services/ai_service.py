@@ -28,8 +28,8 @@ class GeminiClient:
         api_key = os.environ.get("GEMINI_API_KEY")
         
         try:
-            # Use st.secrets.get to avoid KeyError
-            if st.secrets.get("GEMINI_API_KEY"):
+            # Safely check secrets
+            if "GEMINI_API_KEY" in st.secrets:
                 api_key = st.secrets["GEMINI_API_KEY"]
         except Exception:
             pass
