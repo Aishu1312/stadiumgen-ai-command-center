@@ -10,6 +10,9 @@ from config.constants import Prompts
 from typing import Generator, Any, Optional
 import logging
 
+class AIError(Exception):
+    pass
+
 load_dotenv()
 logger = logging.getLogger(__name__)
 
@@ -96,28 +99,28 @@ def get_genai_model() -> Optional[Any]:
 def map_google_error(exc: Exception) -> str:
     """Maps raw Google exceptions to exact user-friendly required strings."""
     if isinstance(exc, google_exceptions.NotFound):
-        return "Model unavailable"
+        return "Unsupported model"
     elif isinstance(exc, google_exceptions.PermissionDenied):
-        return "Authentication failed"
+        return "Invalid API credentials"
     elif isinstance(exc, google_exceptions.ResourceExhausted):
         if "quota" in str(exc).lower():
-            return "Quota exceeded"
-        return "Temporary service issue"
+            return "Rate limit reached"
+        return "Service temporarily unavailable"
     elif isinstance(exc, google_exceptions.DeadlineExceeded):
-        return "Network timeout"
+        return "Timeout"
     elif isinstance(exc, google_exceptions.ServiceUnavailable):
-        return "Temporary service issue"
+        return "Service temporarily unavailable"
     elif isinstance(exc, google_exceptions.InvalidArgument):
         if "API key" in str(exc) or "key" in str(exc).lower():
-            return "Authentication failed"
-        return "Temporary service issue"
+            return "Invalid API credentials"
+        return "Configuration error"
     elif isinstance(exc, ValueError):
-        return "Temporary service issue"
+        return "Unexpected AI response"
     elif "timeout" in str(exc).lower():
-        return "Network timeout"
+        return "Timeout"
     
     logger.error(f"Unhandled AI exception: {str(exc)}", exc_info=True)
-    return "Temporary service issue"
+    return "Service temporarily unavailable"
 
 @retry(
     stop=stop_after_attempt(settings.AI_RETRY_COUNT), 
@@ -167,19 +170,29 @@ def _generate_response_inner(prompt: str, system_instruction: str = "", context:
 def generate_response(prompt: str, system_instruction: str = "") -> str:
     """Wrapper to handle RetryError gracefully."""
     if not prompt or not str(prompt).strip():
-        return "Empty response"
+        raise AIError("Empty response")
 
     context = ""
     if "current_page_context" in st.session_state:
         context = f"Current Context: {st.session_state.current_page_context}\n\n"
 
     try:
-        return _generate_response_inner(prompt, system_instruction, context)
+        response = _generate_response_inner(prompt, system_instruction, context)
+        if response in ["Missing configuration", "Model unavailable", "Empty response"]:
+            if response == "Missing configuration":
+                raise AIError("Missing API credentials")
+            elif response == "Model unavailable":
+                raise AIError("Unsupported model")
+            else:
+                raise AIError("Unexpected AI response")
+        return response
     except RetryError as e:
         last_exc = e.last_attempt.exception() if e.last_attempt else None
-        return map_google_error(last_exc)
+        raise AIError(map_google_error(last_exc))
+    except AIError:
+        raise
     except Exception as e:
-        return map_google_error(e)
+        raise AIError(map_google_error(e))
 
 @retry(
     stop=stop_after_attempt(settings.AI_RETRY_COUNT), 
@@ -250,20 +263,35 @@ def _generate_response_stream_inner(prompt: str, system_instruction: str = "", c
 def generate_response_stream(prompt: str, system_instruction: str = "") -> Generator[str, None, None]:
     """Generates a streaming response for interactive chat UIs."""
     if not prompt or not str(prompt).strip():
-        yield "Empty response"
-        return
+        raise AIError("Empty response")
 
     context = ""
     if "current_page_context" in st.session_state:
         context = f"Current Context: {st.session_state.current_page_context}\n\n"
 
     try:
-        yield from _generate_response_stream_inner(prompt, system_instruction, context)
+        stream = _generate_response_stream_inner(prompt, system_instruction, context)
+        # We need to catch initial errors from the generator
+        first_chunk = next(stream)
+        if first_chunk in ["Missing configuration", "Model unavailable", "Empty response"]:
+            if first_chunk == "Missing configuration":
+                raise AIError("Missing API credentials")
+            elif first_chunk == "Model unavailable":
+                raise AIError("Unsupported model")
+            else:
+                raise AIError("Unexpected AI response")
+        
+        yield first_chunk
+        yield from stream
+    except StopIteration:
+        pass
     except RetryError as e:
         last_exc = e.last_attempt.exception() if e.last_attempt else None
-        yield map_google_error(last_exc)
+        raise AIError(map_google_error(last_exc))
+    except AIError:
+        raise
     except Exception as e:
-        yield map_google_error(e)
+        raise AIError(map_google_error(e))
 
 def translate_text(text: str, target_language: str) -> str:
     """Translates text using Gemini."""

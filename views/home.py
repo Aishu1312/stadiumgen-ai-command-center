@@ -1,7 +1,7 @@
 import streamlit as st
 from components.ui import render_header, render_metric, show_loading_skeleton, render_toast
 from services.data_service import generate_sustainability_metrics
-from services.ai_service import generate_response_stream
+from services.ai_service import generate_response_stream, AIError
 
 # Set context for AI Assistant
 st.session_state.current_page_context = "User is currently on the Home page, viewing the high-level dashboard and quick actions."
@@ -58,7 +58,12 @@ def display_home():
         elif action_result == "Dispatch Medics":
             prompt = "Generate a brief radio dispatch message to the medical team directing them to Zone A for an immediate medical emergency."
             
-        stream = generate_response_stream(prompt)
-        st.write_stream(stream)
+        try:
+            stream = generate_response_stream(prompt)
+            st.write_stream(stream)
+        except AIError as e:
+            st.error(f"🚨 Error: {e}")
+        except Exception as e:
+            st.error("🚨 Error: An unexpected error occurred.")
 
 display_home()

@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from components.ui import render_header, render_metric, show_loading_skeleton
-from services.ai_service import generate_response_stream
+from services.ai_service import generate_response_stream, AIError
 from config.constants import Prompts
 
 st.session_state.current_page_context = "User is on the Organizer Dashboard, viewing high-level metrics and predicting footfall."
@@ -45,8 +45,13 @@ def display_organizer():
         if st.button("Get AI Insight", use_container_width=True):
             if question:
                 st.markdown("#### Insight")
-                stream = generate_response_stream(question, system_instruction=Prompts.SYSTEM_ORGANIZER_INSIGHTS)
-                st.write_stream(stream)
+                try:
+                    stream = generate_response_stream(question, system_instruction=Prompts.SYSTEM_ORGANIZER_INSIGHTS)
+                    st.write_stream(stream)
+                except AIError as e:
+                    st.error(f"🚨 Error: {e}")
+                except Exception as e:
+                    st.error("🚨 Error: An unexpected error occurred.")
             else:
                 st.warning("Please enter a question.")
         st.markdown("</div>", unsafe_allow_html=True)

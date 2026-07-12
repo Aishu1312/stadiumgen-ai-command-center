@@ -1,7 +1,7 @@
 import streamlit as st
 from components.ui import render_header, render_metric, show_loading_skeleton, render_toast
 from services.data_service import generate_sustainability_metrics
-from services.ai_service import generate_response
+from services.ai_service import generate_response, AIError
 
 st.session_state.current_page_context = "User is on the Sustainability page, checking eco-metrics."
 
@@ -52,8 +52,13 @@ def display_sustainability():
         """
         
         with st.spinner("Generating comprehensive report..."):
-            response = generate_response(prompt)
-            st.markdown(response)
-        render_toast("Green Report Generated", "🌱")
+            try:
+                response = generate_response(prompt)
+                st.markdown(response)
+                render_toast("Green Report Generated", "🌱")
+            except AIError as e:
+                st.error(f"🚨 Error: {e}")
+            except Exception as e:
+                st.error("🚨 Error: An unexpected error occurred.")
 
 display_sustainability()

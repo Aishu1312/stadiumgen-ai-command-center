@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 from components.ui import render_header, render_toast
-from services.ai_service import generate_response_stream
+from services.ai_service import generate_response_stream, AIError
 from gtts import gTTS
 import io
 import logging
@@ -193,9 +193,12 @@ def display_accessibility():
                 full_response = st.write_stream(stream)
                 st.session_state.acc_guide_text = full_response
                 st.rerun()
+            except AIError as e:
+                logger.error(f"Error generating accessibility guide: {e}")
+                st.error(f"🚨 Error: {e}")
             except Exception as e:
                 logger.error(f"Error generating accessibility guide: {e}")
-                st.error("Failed to generate the guide. Please check your AI API key configuration.")
+                st.error("🚨 Error: An unexpected error occurred.")
                 
         if st.session_state.acc_guide_text:
             st.markdown("##### Guide Script")

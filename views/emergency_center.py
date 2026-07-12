@@ -1,7 +1,7 @@
 import streamlit as st
 from components.ui import render_header, render_toast
 from services.data_service import generate_incidents
-from services.ai_service import generate_emergency_sop
+from services.ai_service import generate_emergency_sop, AIError
 
 st.session_state.current_page_context = "User is on the Emergency Center page, monitoring live incidents and generating SOPs."
 
@@ -33,10 +33,15 @@ def display_emergency():
         if st.button("Generate Action Checklist", type="primary", use_container_width=True):
             if location:
                 with st.spinner("AI is generating Emergency SOP..."):
-                    sop = generate_emergency_sop(incident_type, location)
-                    st.error("🚨 EMERGENCY SOP GENERATED 🚨")
-                    st.markdown(sop)
-                    render_toast(f"SOP generated for {incident_type}", "🚨")
+                    try:
+                        sop = generate_emergency_sop(incident_type, location)
+                        st.error("🚨 EMERGENCY SOP GENERATED 🚨")
+                        st.markdown(sop)
+                        render_toast(f"SOP generated for {incident_type}", "🚨")
+                    except AIError as e:
+                        st.error(f"🚨 Error: {e}")
+                    except Exception as e:
+                        st.error("🚨 Error: An unexpected error occurred.")
             else:
                 st.warning("Please provide a location to generate the SOP.")
         st.markdown("</div>", unsafe_allow_html=True)

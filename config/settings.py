@@ -10,7 +10,7 @@ class Settings:
     COMPANY_NAME: str = "StadiumGen AI"
     
     # AI Configuration
-    DEFAULT_MODEL: str = "gemini-1.5-flash"
+    DEFAULT_MODEL: str = "gemini-2.5-flash"
     TEMPERATURE: float = 0.7
     MAX_OUTPUT_TOKENS: int = 8192  # Increased to 8192 to prevent report truncation
     AI_TIMEOUT: int = 120  # Restored to 120s to allow complex report generation

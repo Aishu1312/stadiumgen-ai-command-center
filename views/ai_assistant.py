@@ -1,5 +1,5 @@
 import streamlit as st
-from services.ai_service import generate_response_stream
+from services.ai_service import generate_response_stream, AIError
 from components.ui import render_header
 
 st.session_state.current_page_context = "User is currently using the dedicated AI Assistant page for general stadium queries."
@@ -27,10 +27,14 @@ def display_chat():
         with st.chat_message("assistant"):
             sys_prompt = "You are a highly intelligent AI Stadium Assistant. Provide concise, helpful, and polite answers."
             
-            # Stream the response natively
-            response_stream = generate_response_stream(prompt, system_instruction=sys_prompt)
-            full_response = st.write_stream(response_stream)
-            
-        st.session_state.messages.append({"role": "assistant", "content": full_response})
+            try:
+                # Stream the response natively
+                response_stream = generate_response_stream(prompt, system_instruction=sys_prompt)
+                full_response = st.write_stream(response_stream)
+                st.session_state.messages.append({"role": "assistant", "content": full_response})
+            except AIError as e:
+                st.error(f"🚨 Error: {e}")
+            except Exception as e:
+                st.error("🚨 Error: An unexpected error occurred.")
 
 display_chat()
