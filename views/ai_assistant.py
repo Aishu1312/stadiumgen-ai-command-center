@@ -1,7 +1,7 @@
 import streamlit as st
 from services.ai_service import generate_response_stream
 from services.exceptions import AIError
-from components.ui import render_header
+from components.ui import render_header, ai_processing_status
 
 st.session_state.current_page_context = "User is currently using the dedicated AI Assistant page for general stadium queries."
 
@@ -31,14 +31,15 @@ def display_chat():
             
             st.session_state.is_processing = True
             try:
-                with st.spinner("Connecting to AI..."):
+                with ai_processing_status() as _status:
+                    _status.update(label="Processing your request...")
                     response_stream = generate_response_stream(prompt, system_instruction=sys_prompt)
                 full_response = st.write_stream(response_stream)
                 st.session_state.messages.append({"role": "assistant", "content": full_response})
             except AIError as e:
-                st.error(f"🚨 Error: {e}")
+                st.warning(str(e))
             except Exception as e:
-                st.error("🚨 Error: An unexpected error occurred.")
+                st.error("An unexpected error occurred. Please try again later.")
             finally:
                 st.session_state.is_processing = False
 

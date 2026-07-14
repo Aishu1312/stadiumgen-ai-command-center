@@ -44,3 +44,16 @@ def show_loading_skeleton(seconds: float = 1.0, message: str = "Loading data..."
 def render_toast(message: str, icon: str = "ℹ️"):
     """Displays a toast notification."""
     st.toast(message, icon=icon)
+
+import contextlib
+
+@contextlib.contextmanager
+def ai_processing_status():
+    """Context manager to show a professional AI processing flow."""
+    status = st.status("Connecting to AI...", expanded=True)
+    try:
+        yield status
+        status.update(label="Finalizing answer...", state="complete", expanded=False)
+    except Exception as e:
+        status.update(label="AI Service Error", state="error", expanded=False)
+        raise e

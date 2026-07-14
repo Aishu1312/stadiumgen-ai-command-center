@@ -1,5 +1,5 @@
 import streamlit as st
-from components.ui import render_header, render_metric, show_loading_skeleton, render_toast
+from components.ui import render_header, render_metric, show_loading_skeleton, render_toast, ai_processing_status
 from services.data_service import generate_sustainability_metrics
 from services.ai_service import generate_response
 from services.exceptions import AIError
@@ -58,14 +58,15 @@ def display_sustainability():
                 Ensure the report reads naturally from start to finish with no incomplete sentences or truncation. Every sentence must end correctly with proper punctuation. Never allow unfinished text or abrupt endings.
                 """
                 
-                with st.spinner("Generating response..."):
+                with ai_processing_status() as _status:
+                    _status.update(label="Processing your request...")
                     response = generate_response(prompt)
                     st.markdown(response)
                     render_toast("Green Report Generated", "🌱")
             except AIError as e:
-                st.error(f"🚨 Error: {e}")
+                st.warning(str(e))
             except Exception as e:
-                st.error("🚨 Error: An unexpected error occurred.")
+                st.error("An unexpected error occurred. Please try again later.")
             finally:
                 st.session_state.is_processing = False
 

@@ -1,5 +1,5 @@
 import streamlit as st
-from components.ui import render_header, render_metric, show_loading_skeleton, render_toast
+from components.ui import render_header, render_metric, show_loading_skeleton, render_toast, ai_processing_status
 from services.data_service import generate_sustainability_metrics
 from services.ai_service import generate_response_stream
 from services.exceptions import AIError
@@ -66,13 +66,14 @@ def display_home():
         else:
             st.session_state.is_processing = True
             try:
-                with st.spinner("Generating response..."):
+                with ai_processing_status() as _status:
+                    _status.update(label="Processing your request...")
                     stream = generate_response_stream(prompt)
                     st.write_stream(stream)
             except AIError as e:
-                st.error(f"🚨 Error: {e}")
+                st.warning(str(e))
             except Exception as e:
-                st.error("🚨 Error: An unexpected error occurred.")
+                st.error("An unexpected error occurred. Please try again later.")
             finally:
                 st.session_state.is_processing = False
 

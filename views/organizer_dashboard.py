@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from components.ui import render_header, render_metric, show_loading_skeleton
+from components.ui import render_header, render_metric, show_loading_skeleton, ai_processing_status
 from services.ai_service import generate_response_stream
 from services.exceptions import AIError
 from config.constants import Prompts
@@ -52,13 +52,14 @@ def display_organizer():
                     st.session_state.is_processing = True
                     try:
                         st.markdown("#### Insight")
-                        with st.spinner("Connecting to AI..."):
+                        with ai_processing_status() as _status:
+                            _status.update(label="Processing your request...")
                             stream = generate_response_stream(question, system_instruction=Prompts.SYSTEM_ORGANIZER_INSIGHTS)
                             st.write_stream(stream)
                     except AIError as e:
-                        st.error(f"🚨 Error: {e}")
+                        st.warning(str(e))
                     except Exception as e:
-                        st.error("🚨 Error: An unexpected error occurred.")
+                        st.error("An unexpected error occurred. Please try again later.")
                     finally:
                         st.session_state.is_processing = False
             else:

@@ -1,5 +1,5 @@
 import streamlit as st
-from components.ui import render_header, render_toast
+from components.ui import render_header, render_toast, ai_processing_status
 from services.data_service import generate_incidents
 from services.ai_service import generate_emergency_sop
 from services.exceptions import AIError
@@ -39,15 +39,16 @@ def display_emergency():
                 else:
                     st.session_state.is_processing = True
                     try:
-                        with st.spinner("Generating response..."):
+                        with ai_processing_status() as _status:
+                            _status.update(label="Processing your request...")
                             sop = generate_emergency_sop(incident_type, location)
                             st.error("🚨 EMERGENCY SOP GENERATED 🚨")
                             st.markdown(sop)
                             render_toast(f"SOP generated for {incident_type}", "🚨")
                     except AIError as e:
-                        st.error(f"🚨 Error: {e}")
+                        st.warning(str(e))
                     except Exception as e:
-                        st.error("🚨 Error: An unexpected error occurred.")
+                        st.error("An unexpected error occurred. Please try again later.")
                     finally:
                         st.session_state.is_processing = False
             else:

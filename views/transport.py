@@ -1,5 +1,5 @@
 import streamlit as st
-from components.ui import render_header, render_toast, show_loading_skeleton
+from components.ui import render_header, render_toast, show_loading_skeleton, ai_processing_status
 from services.data_service import generate_transport_data
 from services.ai_service import generate_response_stream
 from services.exceptions import AIError
@@ -40,15 +40,16 @@ def display_transport():
                         st.markdown("#### Recommendations")
                         prompt = f"Provide a travel recommendation from {user_loc} to the World Cup Stadium. Suggest the fastest route, the most eco-friendly route, and expected travel time."
                         
-                        with st.spinner("Connecting to AI..."):
+                        with ai_processing_status() as _status:
+                            _status.update(label="Processing your request...")
                             # Streaming the AI response natively
                             stream = generate_response_stream(prompt)
                             st.write_stream(stream)
                         render_toast("Recommendation completed.", "🚍")
                     except AIError as e:
-                        st.error(f"🚨 Error: {e}")
+                        st.warning(str(e))
                     except Exception as e:
-                        st.error("🚨 Error: An unexpected error occurred.")
+                        st.error("An unexpected error occurred. Please try again later.")
                     finally:
                         st.session_state.is_processing = False
             else:

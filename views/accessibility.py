@@ -1,6 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
-from components.ui import render_header, render_toast
+from components.ui import render_header, render_toast, ai_processing_status
 from services.ai_service import generate_response_stream
 from services.exceptions import AIError
 from gtts import gTTS
@@ -195,16 +195,17 @@ def display_accessibility():
                     st.markdown("##### Guide Script")
                     prompt = f"Provide a clear, easy-to-understand, step-by-step guide on: {guidance_topic}. Use simple language suitable for cognitive accessibility. Keep it under 150 words."
                     
-                    with st.spinner("Connecting to AI..."):
+                    with ai_processing_status() as _status:
+                        _status.update(label="Processing your request...")
                         stream = generate_response_stream(prompt)
                         full_response = st.write_stream(stream)
                         st.session_state.acc_guide_text = full_response
                 except AIError as e:
                     logger.error(f"Error generating accessibility guide: {e}")
-                    st.error(f"🚨 Error: {e}")
+                    st.warning(str(e))
                 except Exception as e:
                     logger.error(f"Error generating accessibility guide: {e}")
-                    st.error("🚨 Error: An unexpected error occurred.")
+                    st.error("An unexpected error occurred. Please try again later.")
                 finally:
                     st.session_state.is_processing = False
                 
