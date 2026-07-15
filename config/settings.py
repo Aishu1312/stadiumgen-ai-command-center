@@ -41,9 +41,8 @@ class Settings(BaseSettings):
     COMPANY_NAME: str = "StadiumGen AI"
     DEFAULT_LANGUAGE: str = "English"
 
-    # Google AI / Gemini
-    GEMINI_API_KEY: Optional[str] = None
-    GEMINI_MODEL: str = "gemini-1.5-flash"
+    # Groq AI
+    GROQ_API_KEY: Optional[str] = None
 
     # Database
     DATABASE_URL: str = "sqlite:///stadiumgen.db"
@@ -60,24 +59,24 @@ class Settings(BaseSettings):
 
     @property
     def api_key_resolved(self) -> Optional[str]:
-        """Securely retrieves the Gemini API Key with fallback logic."""
-        possible_keys = ["GEMINI_API_KEY", "GOOGLE_API_KEY", "API_KEY"]
+        """Securely retrieves the Groq API Key with fallback logic."""
+        possible_keys = ["GROQ_API_KEY", "API_KEY"]
         
         # 1. Streamlit secrets
         for key in possible_keys:
             val = get_streamlit_secret(key)
-            if val and val not in ["your_gemini_api_key_here", "your_gemini_api_key"]:
+            if val and val not in ["your_groq_api_key_here", "your_groq_api_key"]:
                 return val
         
         # 2. Pydantic settings (.env or exact os.environ match)
-        if self.GEMINI_API_KEY and self.GEMINI_API_KEY not in ["your_gemini_api_key_here", "your_gemini_api_key"]:
-            return self.GEMINI_API_KEY
+        if self.GROQ_API_KEY and self.GROQ_API_KEY not in ["your_groq_api_key_here", "your_groq_api_key"]:
+            return self.GROQ_API_KEY
         
         # 3. Raw os.environ fallback
         env_dict = {str(k).upper(): v for k, v in os.environ.items()}
         for key in possible_keys:
             val = env_dict.get(key)
-            if val and val not in ["your_gemini_api_key_here", "your_gemini_api_key"]:
+            if val and val not in ["your_groq_api_key_here", "your_groq_api_key"]:
                 return val
 
         return None

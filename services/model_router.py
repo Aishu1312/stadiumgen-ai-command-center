@@ -28,9 +28,7 @@ class ModelRouter:
         candidates = [self.primary] + self.backups
         
         for candidate in candidates:
-            # Format model name to match google-genai format if needed
-            expected_name = candidate if candidate.startswith("models/") else f"models/{candidate}"
-            if candidate not in self._failed_models and expected_name in supported_models:
+            if candidate not in self._failed_models and candidate in supported_models:
                 self.current_model = candidate
                 return candidate
                 

@@ -4,11 +4,10 @@ from typing import List
 @dataclass
 class AIConfig:
     # Model settings
-    primary_model: str = "gemini-1.5-flash"
-    backup_models: List[str] = field(default_factory=lambda: ["gemini-1.5-pro", "gemini-1.0-pro"])
-    api_version: str = "v1beta"
+    primary_model: str = "llama-3.3-70b-versatile"
+    backup_models: List[str] = field(default_factory=lambda: ["llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"])
     temperature: float = 0.7
-    max_output_tokens: int = 8192
+    max_output_tokens: int = 4096
     
     # Retry & Timeout settings
     ai_timeout_seconds: int = 120

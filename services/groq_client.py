@@ -1,6 +1,6 @@
 import logging
 from typing import Optional, Any
-from google import genai
+import groq
 from config.settings import settings
 from config.ai_config import ai_settings
 from services.model_router import ModelRouter
@@ -8,8 +8,8 @@ from utils.ai_validator import validate_api_key
 
 logger = logging.getLogger(__name__)
 
-class GeminiClient:
-    """Centralized client for Google Gemini API."""
+class GroqClient:
+    """Centralized client for Groq API."""
     def __init__(self):
         self.router = ModelRouter()
         self.is_configured = False
@@ -17,7 +17,7 @@ class GeminiClient:
         self.client = None
 
     def configure(self) -> None:
-        """Initializes the Gemini model safely."""
+        """Initializes the Groq model safely."""
         api_key = settings.api_key_resolved
 
         if not validate_api_key(api_key):
@@ -26,14 +26,14 @@ class GeminiClient:
             return
 
         try:
-            self.client = genai.Client(
+            self.client = groq.Groq(
                 api_key=api_key,
-                http_options={'timeout': ai_settings.ai_timeout_seconds * 1000}
+                timeout=float(ai_settings.ai_timeout_seconds)
             )
             
             # Fetch supported models quickly
             try:
-                supported_models = [m.name for m in self.client.models.list()]
+                supported_models = [m.id for m in self.client.models.list().data]
                 # Router handles finding the best model
                 selected_model = self.router.get_next_available_model(supported_models)
                 if not selected_model:
@@ -46,7 +46,7 @@ class GeminiClient:
             self.is_configured = True
             self.config_error = None
         except Exception as e:
-            logger.error(f"Failed to configure Gemini API: {e}")
+            logger.error(f"Failed to configure Groq API: {e}")
             self.config_error = "SDK configuration failed"
             self.is_configured = False
 
