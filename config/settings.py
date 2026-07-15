@@ -1,56 +1,85 @@
 import os
 import streamlit as st
-from typing import Dict, Any
+from typing import Optional
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
 
-class Settings:
+def get_streamlit_secret(key_name: str) -> Optional[str]:
+    try:
+        if hasattr(st, "secrets") and st.secrets:
+            secrets_dict = {str(k).upper(): v for k, v in dict(st.secrets).items()}
+            return str(secrets_dict.get(key_name.upper(), "")).strip() or None
+    except Exception:
+        pass
+    return None
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+
+    # Application
+    APP_NAME: str = "StadiumGen AI Command Center"
+    APP_ENV: str = "development"
+    APP_DEBUG: bool = True
+    APP_HOST: str = "0.0.0.0"
+    APP_PORT: int = 8501
+    APP_VERSION: str = "1.0.0"
+
     # Security
+    SECRET_KEY: str = Field(default="your_secret_key_here")
+    JWT_SECRET_KEY: str = Field(default="your_jwt_secret_here")
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     SESSION_TIMEOUT_MINUTES: int = 30
     MAX_LOGIN_ATTEMPTS: int = 3
-    
+
     # UI Configuration
     THEME_COLOR: str = "#4CAF50"
     COMPANY_NAME: str = "StadiumGen AI"
-    APP_NAME: str = "StadiumGen AI"
-    APP_VERSION: str = "1.0.0"
     DEFAULT_LANGUAGE: str = "English"
-    
-    # AI Configuration
-    DEFAULT_MODEL: str = "gemini-2.0-flash"
-    TEMPERATURE: float = 0.7
-    MAX_OUTPUT_TOKENS: int = 8192  # Increased to 8192 to prevent report truncation
-    AI_TIMEOUT: int = 120  # Restored to 120s to allow complex report generation
-    AI_RETRY_COUNT: int = 3
-    AI_SAFETY_SETTINGS: Any = None
-    
+
+    # Google AI / Gemini
+    GEMINI_API_KEY: Optional[str] = None
+    GEMINI_MODEL: str = "gemini-1.5-flash"
+
+    # Database
+    DATABASE_URL: str = "sqlite:///stadiumgen.db"
+
+    # Streamlit
+    STREAMLIT_SERVER_PORT: int = 8501
+    STREAMLIT_SERVER_HEADLESS: bool = True
+
+    # Logging
+    LOG_LEVEL: str = "INFO"
+
     # Cache Configuration
-    CACHE_TTL: int = 300  # 5 minutes
+    CACHE_TTL: int = 3600
 
     @property
-    def GEMINI_API_KEY(self) -> str | None:
-        """Securely retrieves the Gemini API Key from Streamlit secrets or environment (case-insensitive)."""
+    def api_key_resolved(self) -> Optional[str]:
+        """Securely retrieves the Gemini API Key with fallback logic."""
         possible_keys = ["GEMINI_API_KEY", "GOOGLE_API_KEY", "API_KEY"]
         
-        # Check st.secrets (case-insensitive)
-        try:
-            if hasattr(st, "secrets") and st.secrets:
-                # Convert all keys in st.secrets to uppercase for case-insensitive matching
-                secrets_dict = {str(k).upper(): v for k, v in dict(st.secrets).items()}
-                for key_name in possible_keys:
-                    if key_name in secrets_dict:
-                        val = str(secrets_dict[key_name]).strip()
-                        if val and val != "your_gemini_api_key_here":
-                            return val
-        except Exception as e:
-            pass
-            
-        # Check os.environ (case-insensitive)
+        # 1. Streamlit secrets
+        for key in possible_keys:
+            val = get_streamlit_secret(key)
+            if val and val not in ["your_gemini_api_key_here", "your_gemini_api_key"]:
+                return val
+        
+        # 2. Pydantic settings (.env or exact os.environ match)
+        if self.GEMINI_API_KEY and self.GEMINI_API_KEY not in ["your_gemini_api_key_here", "your_gemini_api_key"]:
+            return self.GEMINI_API_KEY
+        
+        # 3. Raw os.environ fallback
         env_dict = {str(k).upper(): v for k, v in os.environ.items()}
-        for key_name in possible_keys:
-            if key_name in env_dict:
-                val = str(env_dict[key_name]).strip()
-                if val and val != "your_gemini_api_key_here":
-                    return val
-                    
+        for key in possible_keys:
+            val = env_dict.get(key)
+            if val and val not in ["your_gemini_api_key_here", "your_gemini_api_key"]:
+                return val
+
         return None
 
 settings = Settings()

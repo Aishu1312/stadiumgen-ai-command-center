@@ -8,3 +8,5 @@ streamlit-folium>=0.17.0
 faker>=22.0.0
 tenacity>=8.2.0
 gTTS>=2.5.1
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0

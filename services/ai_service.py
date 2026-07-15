@@ -5,13 +5,13 @@ from google.genai import errors as genai_errors
 from tenacity import RetryError
 from typing import Generator, Any, Optional
 
-from config.settings import settings
 from config.ai_config import ai_settings
 from config.constants import Prompts
 from services.exceptions import AIError
-from services.model_router import ModelRouter
+from services.gemini_client import GeminiClient
 from services.retry_handler import get_retry_decorator
 from services.cache_manager import ai_cache, model_cache
+from utils.ai_validator import validate_request_parameters
 from utils.logging_utils import get_logger
 from utils.performance import track_time
 
@@ -22,7 +22,7 @@ def map_google_error(exc: Exception) -> str:
     if isinstance(exc, genai_errors.ClientError):
         code = getattr(exc, 'code', None)
         if code == 404:
-            return "Unsupported model"
+            return "The AI model is temporarily unavailable. Please try again shortly."
         elif code in (401, 403):
             return "Invalid API credentials"
         elif code == 429:
@@ -41,52 +41,7 @@ def map_google_error(exc: Exception) -> str:
     logger.error(f"Unhandled AI exception: {str(exc)}", exc_info=True)
     return "The AI service is currently unavailable. Please try again later."
 
-class GeminiClient:
-    """Centralized client for Google Gemini API."""
-    def __init__(self):
-        self.router = ModelRouter()
-        self.is_configured = False
-        self.config_error = None
-        self.client = None
 
-    def configure(self) -> None:
-        """Initializes the Gemini model safely."""
-        api_key = settings.GEMINI_API_KEY
-
-        if not api_key:
-            self.config_error = "Missing configuration"
-            self.is_configured = False
-            return
-
-        try:
-            self.client = genai.Client(
-                api_key=api_key,
-                http_options={'timeout': ai_settings.ai_timeout_seconds * 1000}
-            )
-            
-            # Fetch supported models quickly
-            try:
-                supported_models = [m.name for m in self.client.models.list()]
-                # Router handles finding the best model
-                selected_model = self.router.get_next_available_model(supported_models)
-                if not selected_model:
-                    self.config_error = "Model unavailable"
-                    self.is_configured = False
-                    return
-            except Exception as e:
-                logger.warning(f"Could not validate model list during startup: {e}")
-
-            self.is_configured = True
-            self.config_error = None
-        except Exception as e:
-            logger.error(f"Failed to configure Gemini API: {e}")
-            self.config_error = "SDK configuration failed"
-            self.is_configured = False
-
-    def get_client(self) -> Optional[Any]:
-        if not self.is_configured:
-            self.configure()
-        return self.client if self.is_configured else None
 
 @model_cache
 def get_ai_client() -> GeminiClient:
@@ -143,7 +98,7 @@ def _generate_response_inner(prompt: str, system_instruction: str = "", context:
 
 def generate_response(prompt: str, system_instruction: str = "") -> str:
     """Wrapper to handle RetryError gracefully."""
-    if not prompt or not str(prompt).strip():
+    if not validate_request_parameters(prompt):
         raise AIError("Empty response")
 
     context = ""
@@ -156,7 +111,7 @@ def generate_response(prompt: str, system_instruction: str = "") -> str:
             if response == "Missing configuration":
                 raise AIError("Missing API credentials")
             elif response == "Model unavailable":
-                raise AIError("Unsupported model")
+                raise AIError("The AI model is temporarily unavailable. Please try again shortly.")
             else:
                 raise AIError("Unexpected AI response")
         return response
@@ -218,7 +173,7 @@ def _get_stream_and_first_chunk(prompt: str, system_instruction: str = "", conte
 
 def generate_response_stream(prompt: str, system_instruction: str = "") -> Generator[str, None, None]:
     """Generates a streaming response for interactive chat UIs."""
-    if not prompt or not str(prompt).strip():
+    if not validate_request_parameters(prompt):
         raise AIError("Empty response")
 
     context = ""
@@ -232,7 +187,7 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
             if first_chunk == "Missing configuration":
                 raise AIError("Missing API credentials")
             elif first_chunk == "Model unavailable":
-                raise AIError("Unsupported model")
+                raise AIError("The AI model is temporarily unavailable. Please try again shortly.")
             else:
                 raise AIError("Unexpected AI response")
         

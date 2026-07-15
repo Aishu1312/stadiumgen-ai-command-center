@@ -4,8 +4,9 @@ from typing import List
 @dataclass
 class AIConfig:
     # Model settings
-    primary_model: str = "gemini-2.0-flash"
-    backup_models: List[str] = field(default_factory=lambda: ["gemini-2.5-flash", "gemini-2.5-pro"])
+    primary_model: str = "gemini-1.5-flash"
+    backup_models: List[str] = field(default_factory=lambda: ["gemini-1.5-pro", "gemini-1.0-pro"])
+    api_version: str = "v1beta"
     temperature: float = 0.7
     max_output_tokens: int = 8192
     

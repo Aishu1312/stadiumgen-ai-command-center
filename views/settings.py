@@ -18,7 +18,8 @@ def display_settings():
         
         st.markdown("### 🤖 AI Configuration")
         st.selectbox("LLM Provider", ["Google Gemini (Preferred)", "OpenAI", "Anthropic"])
-        st.slider("AI Creativity (Temperature)", min_value=0.0, max_value=1.0, value=settings.TEMPERATURE, step=0.1)
+        from config.ai_config import ai_settings
+        st.slider("AI Creativity (Temperature)", min_value=0.0, max_value=1.0, value=ai_settings.temperature, step=0.1)
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col2:
