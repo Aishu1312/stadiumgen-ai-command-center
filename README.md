@@ -11,7 +11,7 @@ Recently upgraded with Enterprise-grade Architecture, Premium Glassmorphism UI, 
 
 ## 🌟 Features
 
-- **AI Stadium Assistant**: Native streaming multilingual AI chatbot using Gemini API.
+- **AI Stadium Assistant**: Native streaming multilingual AI chatbot using Groq API.
 - **Smart Navigation**: Interactive Folium stadium map with shortest paths.
 - **Crowd Intelligence**: Plotly heatmaps and queue predictions (Cached).
 - **AI Transport Planner**: Best routes, ETAs, and streaming travel advice.
@@ -32,7 +32,7 @@ WorldCup AI Command Center/
 ├── models/                    # Data Structures
 │   └── data_models.py         # Data Classes
 ├── services/                  # Business Logic
-│   ├── ai_service.py          # Gemini AI API Wrapper (Streaming, Retry)
+│   ├── ai_service.py          # Groq AI API Wrapper (Streaming, Retry)
 │   └── data_service.py        # Cached Mock Data Generation
 ├── components/                # Reusable UI
 │   └── ui.py                  # Cards, KPIs, Skeletons, Toasts
@@ -44,7 +44,7 @@ WorldCup AI Command Center/
 
 - **Frontend**: Streamlit, Custom CSS (Glassmorphism), Streamlit Folium
 - **Backend**: Python 3.9+
-- **AI**: Google Gemini API (`google-generativeai`)
+- **AI**: Groq API (`groq`)
 - **Optimization**: `@st.cache_data`, `@st.cache_resource`, `tenacity` retry logic
 - **Data & Visualization**: Plotly, Folium, Pandas, Numpy
 
@@ -60,7 +60,7 @@ This repository is strictly optimized for **Streamlit Community Cloud**.
 3. **Configure Environment**:
    - Create a `.env` file (or add to Streamlit Secrets):
      ```toml
-     GEMINI_API_KEY = "your_actual_api_key_here"
+     GROQ_API_KEY = "your_actual_api_key_here"
      ```
 4. **Run the App**:
    ```bash

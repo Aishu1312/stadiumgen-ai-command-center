@@ -4,7 +4,7 @@
 - Tested Page Navigation
 - Tested AI Chatbot interactions
 - Tested UI Component rendering (Metrics, Toasts, Skeletons)
-- Tested API failures (Simulated missing GEMINI_API_KEY)
+- Tested API failures (Simulated missing GROQ_API_KEY)
 
 ## Results
 | Feature | Status | Notes |

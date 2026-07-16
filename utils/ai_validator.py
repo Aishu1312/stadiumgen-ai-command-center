@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 
 def validate_api_key(api_key: Optional[str]) -> bool:
     """Validates that the API key is present and looks reasonable."""
-    if not api_key or not str(api_key).strip() or str(api_key).strip() in ("your_gemini_api_key_here", "your_groq_api_key_here"):
+    if not api_key or not str(api_key).strip() or str(api_key).strip() in ("your_groq_api_key_here", "your_groq_api_key"):
         logger.error("AI Validation Error: API key is missing or invalid.")
         return False
     return True

@@ -16,7 +16,7 @@ from config.settings import settings
 def main():
     if not settings.api_key_resolved:
         st.error("🚨 **Configuration Error: Missing API Key**")
-        st.markdown("The application requires a `GEMINI_API_KEY` to function.")
+        st.markdown("The application requires a `GROQ_API_KEY` to function.")
         st.markdown("Please set it in your `.env` file or Streamlit secrets.")
         st.stop()
         
