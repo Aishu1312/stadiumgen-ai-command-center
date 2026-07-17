@@ -94,6 +94,10 @@ def generate_response(prompt: str, system_instruction: str = "") -> str:
     if not validate_request_parameters(prompt):
         raise AIError("Empty response")
 
+    target_lang = st.session_state.get("language", "English")
+    if target_lang != "English":
+        system_instruction = (system_instruction or "") + f"\nIMPORTANT: You must respond/write in {target_lang}."
+
     context = ""
     if "current_page_context" in st.session_state:
         context = f"Current Context: {st.session_state.current_page_context}\n\n"
@@ -176,6 +180,10 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
     if not validate_request_parameters(prompt):
         raise AIError("Empty response")
 
+    target_lang = st.session_state.get("language", "English")
+    if target_lang != "English":
+        system_instruction = (system_instruction or "") + f"\nIMPORTANT: You must respond/write in {target_lang}."
+
     context = ""
     if "current_page_context" in st.session_state:
         context = f"Current Context: {st.session_state.current_page_context}\n\n"
@@ -215,8 +223,11 @@ def generate_response_stream(prompt: str, system_instruction: str = "") -> Gener
 @ai_cache
 def translate_text(text: str, target_language: str) -> str:
     """Translates text using Groq."""
-    prompt = f"Translate the following text to {target_language}. Return ONLY the translation, no extra text.\n\n{text}"
-    return generate_response(prompt)
+    prompt = f"Translate the following text to {target_language}. Return ONLY the translation, no extra text. Do not add any introductory phrases, explanations, or quotes. Just output the translated text.\n\n{text}"
+    try:
+        return _generate_response_inner(prompt)
+    except Exception:
+        return generate_response(prompt)
 
 @ai_cache
 def generate_emergency_sop(incident_type: str, location: str) -> str:

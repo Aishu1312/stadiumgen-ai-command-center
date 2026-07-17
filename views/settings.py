@@ -12,9 +12,33 @@ def display_settings():
     with col1:
         st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
         st.markdown("### 🌍 Language Preferences")
-        lang = st.selectbox("Default Application Language", 
-                     ["English", "Spanish", "French", "Arabic", "Portuguese", "Hindi", "Japanese", "German", "Italian", "Chinese"],
-                     index=0)
+        
+        languages_map = {
+            "English": "English",
+            "Spanish": "Español",
+            "French": "Français",
+            "Arabic": "العربية",
+            "Portuguese": "Português",
+            "Hindi": "हिन्दी",
+            "Japanese": "日本語",
+            "German": "Deutsch",
+            "Italian": "Italiano",
+            "Chinese": "中文"
+        }
+        reverse_languages_map = {v: k for k, v in languages_map.items()}
+        
+        current_lang = st.session_state.get("language", "English")
+        native_options = list(languages_map.values())
+        default_native = languages_map.get(current_lang, "English")
+        try:
+            default_index = native_options.index(default_native)
+        except ValueError:
+            default_index = 0
+            
+        selected_native = st.selectbox("Default Application Language", 
+                     native_options,
+                     index=default_index)
+        lang = reverse_languages_map.get(selected_native, "English")
         
         st.markdown("### 🤖 AI Configuration")
         st.selectbox("LLM Provider", ["Groq (Preferred)", "OpenAI", "Anthropic"])
@@ -25,16 +49,24 @@ def display_settings():
     with col2:
         st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
         st.markdown("### 🎨 Theme Settings")
-        st.radio("Active Theme", ["Dark Mode (Glassmorphism)", "Light Mode"])
+        
+        theme_options = ["Dark Mode (Glassmorphism)", "Light Mode"]
+        current_theme = st.session_state.get("theme", "Dark Mode (Glassmorphism)")
+        try:
+            theme_index = theme_options.index(current_theme)
+        except ValueError:
+            theme_index = 0
+        theme = st.radio("Active Theme", theme_options, index=theme_index)
 
         st.markdown("### 🔐 Security")
         st.checkbox("Enable Offline Emergency Mode", value=True)
-        st.checkbox("Auto-dispatch Security on Red Zones", value=False)
         st.markdown("</div>", unsafe_allow_html=True)
 
     if st.button("Save Settings", type="primary", use_container_width=True):
         st.session_state.language = lang
+        st.session_state.theme = theme
         st.success("Settings saved successfully.")
         render_toast("Settings updated", "⚙️")
+        st.rerun()
 
 display_settings()

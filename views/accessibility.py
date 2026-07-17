@@ -226,7 +226,9 @@ def display_accessibility():
                     if not st.session_state.acc_audio_bytes:
                         try:
                             with st.spinner("Generating audio..."):
-                                tts = gTTS(st.session_state.acc_guide_text, lang='en')
+                                from utils.translation import LANG_MAP
+                                lang_code = LANG_MAP.get(st.session_state.get("language", "English"), "en")
+                                tts = gTTS(st.session_state.acc_guide_text, lang=lang_code)
                                 audio_fp = io.BytesIO()
                                 tts.write_to_fp(audio_fp)
                                 st.session_state.acc_audio_bytes = audio_fp.getvalue()
@@ -243,7 +245,14 @@ def display_accessibility():
                     st.session_state.acc_play_audio = False
 
             if st.session_state.acc_play_audio and st.session_state.acc_audio_bytes:
-                st.audio(st.session_state.acc_audio_bytes, format="audio/mp3", autoplay=True)
+                import base64
+                b64_audio = base64.b64encode(st.session_state.acc_audio_bytes).decode('utf-8')
+                audio_html = f"""
+                    <audio autoplay style="display:none;">
+                        <source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3">
+                    </audio>
+                """
+                st.markdown(audio_html, unsafe_allow_html=True)
                 render_toast("Audio is playing...", "🔊")
                 
         st.markdown("</div>", unsafe_allow_html=True)
@@ -251,11 +260,173 @@ def display_accessibility():
     st.markdown("---")
     
     st.markdown("### 🎙️ Speech-to-Text & Voice Commands")
-    st.markdown("We support native OS voice dictation for all inputs. Ensure you are in a quiet environment.")
-    st.text_input("Speak or Type your command here:", 
+    st.markdown("Click the microphone button and start speaking, or type your query in the input field below.")
+    
+    # 1. Map language selection to Web Speech API language locale
+    from utils.translation import LANG_MAP
+    lang_code = LANG_MAP.get(st.session_state.get("language", "English"), "en")
+    speech_lang_map = {
+        "en": "en-US",
+        "es": "es-ES",
+        "fr": "fr-FR",
+        "ar": "ar-SA",
+        "pt": "pt-PT",
+        "hi": "hi-IN",
+        "ja": "ja-JP",
+        "de": "de-DE",
+        "it": "it-IT",
+        "zh": "zh-CN"
+    }
+    speech_lang = speech_lang_map.get(lang_code, "en-US")
+    
+    # 2. Microphone Button HTML/JS Widget
+    mic_html_content = f"""
+    <style>
+    body {{
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: transparent;
+    }}
+    </style>
+    <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 15px;">
+        <button id="start-record-btn" onclick="startDictation()" style="
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        " onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='translateY(0)';">
+            <span id="mic-icon">🎙️</span> <span id="mic-text">Click to Speak</span>
+        </button>
+        <p id="mic-status" style="margin: 0; font-size: 14px; color: #64748b; display: none; font-family: system-ui; font-weight: 500;"></p>
+    </div>
+
+    <script>
+    // Dynamically elevate iframe permissions to allow microphone access
+    if (window.frameElement) {{
+        window.frameElement.setAttribute('allow', 'microphone');
+    }}
+
+    function startDictation() {{
+        const btn = document.getElementById('start-record-btn');
+        const icon = document.getElementById('mic-icon');
+        const text = document.getElementById('mic-text');
+        const status = document.getElementById('mic-status');
+        
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {{
+            alert("Speech recognition is not supported in this browser. Please try Chrome or Safari.");
+            return;
+        }}
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        
+        recognition.lang = '{speech_lang}'; 
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = function() {{
+            btn.style.background = 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)';
+            btn.style.boxShadow = '0 4px 15px rgba(239, 68, 68, 0.4)';
+            icon.innerText = '🔴';
+            text.innerText = 'Listening...';
+            status.style.display = 'block';
+            status.innerText = 'Listening to your voice... Speak now.';
+        }};
+
+        recognition.onerror = function(event) {{
+            console.error(event.error);
+            resetBtn();
+            status.innerText = 'Error: ' + event.error;
+        }};
+
+        recognition.onend = function() {{
+            resetBtn();
+        }};
+
+        recognition.onresult = function(event) {{
+            const resultText = event.results[0][0].transcript;
+            status.innerText = 'Recognized: "' + resultText + '"';
+            
+            // Post result to parent input box using React Native Value Setter
+            try {{
+                const parentDoc = window.parent.document;
+                const inputEl = parentDoc.querySelector('input[placeholder="e.g. Where is the nearest sensory room?"]');
+                if (inputEl) {{
+                    // React value-setter bypass
+                    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+                    setter.call(inputEl, resultText);
+                    
+                    // Notify React of the state change
+                    inputEl.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    
+                    // Focus the element so the user can immediately press Enter on their keyboard
+                    inputEl.focus();
+                }} else {{
+                    console.error("Parent input element not found.");
+                }}
+            }} catch (e) {{
+                console.error("Error setting parent element:", e);
+            }}
+        }};
+
+        function resetBtn() {{
+            btn.style.background = 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)';
+            btn.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.3)';
+            icon.innerText = '🎙️';
+            text.innerText = 'Click to Speak';
+        }}
+
+        recognition.start();
+    }}
+    </script>
+    """
+    components.html(mic_html_content, height=80)
+
+    # 3. Standard Text Input Box (which the JS script binds to)
+    command = st.text_input("Speak or Type your command here:", 
                   placeholder="e.g. Where is the nearest sensory room?", 
-                  help="Use your device's native dictation (Windows Key + H on Windows, or double-tap Fn on Mac) to use Speech-to-Text.", 
+                  help="Type your command or click the microphone button above to speak.", 
                   key="acc_stt")
+                  
+    # 4. AI Voice Responder and Auto-read aloud
+    if command:
+        st.markdown(f"**Your Voice Command:** *{command}*")
+        try:
+            with st.spinner("AI is processing voice command..."):
+                from services.ai_service import generate_response
+                prompt = f"The user is using a voice command in the accessibility section. Answer the query clearly, warmly, and concisely. Keep it under 80 words so it is suitable for cognitive accessibility and voice readout: {command}"
+                response = generate_response(prompt)
+                
+                st.markdown("<div class='glass-card' style='border-left: 5px solid var(--primary);'>", unsafe_allow_html=True)
+                st.markdown("#### 🤖 AI Voice Response")
+                st.markdown(response)
+                st.markdown("</div>", unsafe_allow_html=True)
+                
+                # Automatically load this text into TTS and trigger play
+                st.session_state.acc_guide_text = response
+                st.session_state.acc_audio_bytes = None
+                
+                try:
+                    tts = gTTS(response, lang=lang_code)
+                    audio_fp = io.BytesIO()
+                    tts.write_to_fp(audio_fp)
+                    st.session_state.acc_audio_bytes = audio_fp.getvalue()
+                    st.session_state.acc_play_audio = True
+                except Exception as tts_err:
+                    logger.error(f"Auto-TTS generation failed: {tts_err}")
+                
+        except Exception as e:
+            st.error(f"Error processing command: {e}")
 
     st.markdown("---")
     
