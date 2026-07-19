@@ -6,8 +6,12 @@ from services.exceptions import AIError
 
 st.session_state.current_page_context = "User is on the Emergency Center page, monitoring live incidents and generating SOPs."
 
-def display_emergency():
-    render_header("Emergency AI Command", "Live incident tracking and automated SOP generation")
+def display_emergency() -> None:
+    """
+    Renders the Emergency Center page for FIFA World Cup 2026,
+    allowing operators to monitor live incidents and generate AI-driven SOPs.
+    """
+    render_header("Emergency AI Command (FIFA World Cup 2026)", "Live incident tracking and automated SOP generation for stadium operations")
 
     col1, col2 = st.columns([1, 1])
 

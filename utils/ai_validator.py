@@ -18,8 +18,32 @@ def validate_model(model_name: str, supported_models: List[str]) -> bool:
     return True
 
 def validate_request_parameters(prompt: str) -> bool:
-    """Validates that the prompt is not empty."""
+    """Validates that the prompt is not empty and protects against basic prompt injection."""
     if not prompt or not str(prompt).strip():
         logger.error("AI Validation Error: Prompt is empty.")
         return False
+        
+    prompt_lower = str(prompt).lower()
+    
+    # Basic prompt injection keywords protection
+    dangerous_patterns = [
+        "ignore all previous instructions",
+        "you are now",
+        "system prompt",
+        "bypass",
+        "jailbreak",
+        "as an ai",
+        "developer mode"
+    ]
+    
+    for pattern in dangerous_patterns:
+        if pattern in prompt_lower:
+            logger.warning(f"AI Validation Security Warning: Potential prompt injection detected. Pattern: '{pattern}'")
+            return False
+            
+    # Length validation to prevent DOS
+    if len(prompt) > 2000:
+        logger.warning("AI Validation Error: Prompt exceeds maximum allowed length.")
+        return False
+        
     return True
